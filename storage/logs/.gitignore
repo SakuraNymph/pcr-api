@@ -1,0 +1,4 @@
+*
+!.gitignore
+/app/Http/Controllers/TestController.php
+/app/Http/Controllers/Api/TestController.php

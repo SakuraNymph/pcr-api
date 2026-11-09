@@ -1,0 +1,4704 @@
+{
+  "source": "pcr.teams legacy export",
+  "exported_at": "2026-10-30",
+  "notes": [
+    "Records preserve the original legacy columns used by the migration.",
+    "All 86 records are included. Legacy stage 5 maps to target stage 4."
+  ],
+  "records": [
+    {
+      "id": 3908,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 4200,
+      "team_key": "1320,1338,1806,1255,1044",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1255,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592401,
+      "created_at": "2026-10-21 22:20:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3909,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 4800,
+      "team_key": "1320,1338,1806,1255,1044",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1255,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592401,
+      "created_at": "2026-10-21 22:20:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3910,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1320,1338,1806,1255,1044",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1255,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592401,
+      "created_at": "2026-10-21 22:20:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3911,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1320,1338,1806,1255,1044",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1255,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592401,
+      "created_at": "2026-10-21 22:20:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3912,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 4200,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3913,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 4800,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3914,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 5000,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3915,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 5200,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3916,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 6000,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3917,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3918,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1340,1038,1352,1301,1353",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3919,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 4200,
+      "team_key": "1297,1248,1225,1086,1061",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3920,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 4800,
+      "team_key": "1297,1248,1225,1086,1061",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3921,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 5000,
+      "team_key": "1297,1248,1225,1086,1061",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3922,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 5200,
+      "team_key": "1297,1248,1225,1086,1061",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3923,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 6000,
+      "team_key": "1297,1248,1225,1086,1061",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3924,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 4200,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3925,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 4800,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3926,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 5000,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3927,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 5200,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3928,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 6000,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3929,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1068,1346,1808,1248,1057",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1255335820168003634",
+          "note": "",
+          "text": "一只浅梦丶 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592402,
+      "created_at": "2026-10-21 22:20:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3930,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 4200,
+      "team_key": "1114,1806,1013,1103,1006",
+      "roles": [
+        {
+          "role_id": 1114,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1013,
+          "status": 1
+        },
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1006,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3931,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 4800,
+      "team_key": "1008,1060,1022,1044,1045",
+      "roles": [
+        {
+          "role_id": 1008,
+          "status": 1
+        },
+        {
+          "role_id": 1060,
+          "status": 1
+        },
+        {
+          "role_id": 1022,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        },
+        {
+          "role_id": 1045,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3932,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 5000,
+      "team_key": "1038,1059,1248,1003,1162",
+      "roles": [
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1059,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1003,
+          "status": 1
+        },
+        {
+          "role_id": 1162,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3933,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 5200,
+      "team_key": "1103,1173,1168,1086,1043",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1173,
+          "status": 1
+        },
+        {
+          "role_id": 1168,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3934,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 6000,
+      "team_key": "1167,1248,1071,1065,1061",
+      "roles": [
+        {
+          "role_id": 1167,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1071,
+          "status": 1
+        },
+        {
+          "role_id": 1065,
+          "status": 1
+        },
+        {
+          "role_id": 1061,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3935,
+      "stage": 2,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 6000,
+      "team_key": "1016,1808,1248,1332,1057",
+      "roles": [
+        {
+          "role_id": 1016,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1332,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3936,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1248,1216,1330,1027,1043",
+      "roles": [
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1216,
+          "status": 1
+        },
+        {
+          "role_id": 1330,
+          "status": 1
+        },
+        {
+          "role_id": 1027,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3937,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1114,1338,1060,1044,1045",
+      "roles": [
+        {
+          "role_id": 1114,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1060,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        },
+        {
+          "role_id": 1045,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3938,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1103,1173,1057,1086,1056",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1173,
+          "status": 1
+        },
+        {
+          "role_id": 1057,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1056,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 简单SET 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3939,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1103,1173,1168,1086,1043",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1173,
+          "status": 1
+        },
+        {
+          "role_id": 1168,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1253432947794509857",
+          "note": "",
+          "text": "初夏灬清新 简单SET 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792592863,
+      "created_at": "2026-10-21 22:27:43",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3940,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 42700,
+      "team_key": "1181,1320,1806,1067,1331",
+      "roles": [
+        {
+          "role_id": 1181,
+          "status": 1
+        },
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 42700w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 42302w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 36157w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 35531w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 简单SET 33660w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 31985w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 31085w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 30139w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594079,
+      "created_at": "2026-10-21 22:47:59",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3941,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 29310,
+      "team_key": "1181,1320,1338,1067,1331",
+      "roles": [
+        {
+          "role_id": 1181,
+          "status": 1
+        },
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 29310w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 27978w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594079,
+      "created_at": "2026-10-21 22:47:59",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3942,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 26994,
+      "team_key": "1320,1338,1806,1318,1331",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1318,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 26994w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 26106w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594079,
+      "created_at": "2026-10-21 22:47:59",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3943,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 20272,
+      "team_key": "1290,1181,1806,1067,1331",
+      "roles": [
+        {
+          "role_id": 1290,
+          "status": 1
+        },
+        {
+          "role_id": 1181,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 20272w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594079,
+      "created_at": "2026-10-21 22:47:59",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3944,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 33901,
+      "team_key": "1297,1347,1809,1355,1136",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1809,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1136,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 33901w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 33168w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 32270w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 28863w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 27941w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 简单SET 26360w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 25435w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 24751w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594079,
+      "created_at": "2026-10-21 22:47:59",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3945,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 23642,
+      "team_key": "1297,1347,1287,1355,1136",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1287,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1136,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 23642w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 22945w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3946,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 22545,
+      "team_key": "1290,1338,1182,1318,1331",
+      "roles": [
+        {
+          "role_id": 1290,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1182,
+          "status": 1
+        },
+        {
+          "role_id": 1318,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 22545w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 22014w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3947,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 36489,
+      "team_key": "1350,1340,1307,1308,1241",
+      "roles": [
+        {
+          "role_id": 1350,
+          "status": 1
+        },
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1307,
+          "status": 1
+        },
+        {
+          "role_id": 1308,
+          "status": 1
+        },
+        {
+          "role_id": 1241,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1kKnt6vECM",
+          "note": "",
+          "text": "月面信号延迟 简单目押 36489w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 35769w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 简单目押 35210w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 34550w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 30389w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 29346w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 简单SET 27113w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 25200w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 24322w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 23632w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 22910w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3948,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 21957,
+      "team_key": "1350,1343,1340,1307,1241",
+      "roles": [
+        {
+          "role_id": 1350,
+          "status": 1
+        },
+        {
+          "role_id": 1343,
+          "status": 1
+        },
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1307,
+          "status": 1
+        },
+        {
+          "role_id": 1241,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 21957w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3949,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 23681,
+      "team_key": "1350,1343,1312,1340,1296",
+      "roles": [
+        {
+          "role_id": 1350,
+          "status": 1
+        },
+        {
+          "role_id": 1343,
+          "status": 1
+        },
+        {
+          "role_id": 1312,
+          "status": 1
+        },
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1296,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 23681w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 22793w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3950,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 33999,
+      "team_key": "1317,1322,1337,1325,1226",
+      "roles": [
+        {
+          "role_id": 1317,
+          "status": 1
+        },
+        {
+          "role_id": 1322,
+          "status": 1
+        },
+        {
+          "role_id": 1337,
+          "status": 1
+        },
+        {
+          "role_id": 1325,
+          "status": 1
+        },
+        {
+          "role_id": 1226,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 33999w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 29837w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 28217w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 24283w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 23606w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 22831w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3951,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 26589,
+      "team_key": "1170,1316,1812,1115,1056",
+      "roles": [
+        {
+          "role_id": 1170,
+          "status": 1
+        },
+        {
+          "role_id": 1316,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1115,
+          "status": 1
+        },
+        {
+          "role_id": 1056,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 26589w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 25065w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 24203w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 23909w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 23300w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3952,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 20016,
+      "team_key": "1068,1346,1348,1808,1351",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 20016w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3953,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 21944,
+      "team_key": "1068,1346,1808,1321,1351",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 21944w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 20526w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3954,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 34477,
+      "team_key": "1293,1346,1812,1295,1351",
+      "roles": [
+        {
+          "role_id": 1293,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1295,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 34477w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 34139w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 32185w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 开关SET 28900w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 28659w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 27855w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 20597w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 19395w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3955,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 37222,
+      "team_key": "1354,1346,1348,1264,1321",
+      "roles": [
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1264,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1wMnt6PEuu",
+          "note": "",
+          "text": "月面信号延迟 简单目押 37222w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 36793w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 35696w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 35114w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 34079w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 29602w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 简单SET 25501w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 24444w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 23238w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3956,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 21003,
+      "team_key": "1354,1346,1348,1207,1321",
+      "roles": [
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1207,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 21003w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3957,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 27694,
+      "team_key": "1297,1347,1302,1355,1311",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1302,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1311,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 27694w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 21195w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 21052w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3958,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 22230,
+      "team_key": "1297,1347,1809,1355,1311",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1809,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1311,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 22230w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 21110w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 20837w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594080,
+      "created_at": "2026-10-21 22:48:00",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3959,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 33214,
+      "team_key": "1336,1361,1330,1339,1331",
+      "roles": [
+        {
+          "role_id": 1336,
+          "status": 1
+        },
+        {
+          "role_id": 1361,
+          "status": 1
+        },
+        {
+          "role_id": 1330,
+          "status": 1
+        },
+        {
+          "role_id": 1339,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 33214w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 29473w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 27895w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 26905w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 25697w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 纯AUTO 25226w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594868,
+      "created_at": "2026-10-21 23:01:08",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3960,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 36783,
+      "team_key": "1297,1347,1355,1349,1311",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1349,
+          "status": 1
+        },
+        {
+          "role_id": 1311,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 36783w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 35981w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 开关SET 35757w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1cunt6YETw",
+          "note": "",
+          "text": "月面信号延迟 简单目押 35289w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1261937833425240086",
+          "note": "",
+          "text": "月面信号延迟 开关SET 33476w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/opus/1259794880997097478",
+          "note": "",
+          "text": "-Evexy- 简单目押 32383w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 20784w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792594869,
+      "created_at": "2026-10-21 23:01:09",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3961,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 35896,
+      "team_key": "1297,1347,1809,1355,1136",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1809,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1136,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 2,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV11kHP61Ef2",
+          "note": "",
+          "text": "渡尘吖 目押 35896w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 34181w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1FWnm6RE75",
+          "note": "",
+          "text": "渡尘吖 目押 34141w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792667481,
+      "created_at": "2026-10-22 19:11:21",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3962,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 37326,
+      "team_key": "1350,1340,1307,1308,1241",
+      "roles": [
+        {
+          "role_id": 1350,
+          "status": 1
+        },
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1307,
+          "status": 1
+        },
+        {
+          "role_id": 1308,
+          "status": 1
+        },
+        {
+          "role_id": 1241,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 2,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1kKnt6vECM",
+          "note": "",
+          "text": "月面信号延迟 目押 37326w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 36534w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1mTn16oEc4",
+          "note": "",
+          "text": "初夏灬清新 目押 35441w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792667575,
+      "created_at": "2026-10-22 19:12:55",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3963,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1038,1107,1063,1301,1053",
+      "roles": [
+        {
+          "role_id": 1038,
+          "status": 1
+        },
+        {
+          "role_id": 1107,
+          "status": 1
+        },
+        {
+          "role_id": 1063,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1053,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668181,
+      "created_at": "2026-10-22 19:23:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3964,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1060,1216,1298,1027,1043",
+      "roles": [
+        {
+          "role_id": 1060,
+          "status": 1
+        },
+        {
+          "role_id": 1216,
+          "status": 1
+        },
+        {
+          "role_id": 1298,
+          "status": 1
+        },
+        {
+          "role_id": 1027,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668181,
+      "created_at": "2026-10-22 19:23:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3965,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1114,1806,1255,1216,1139",
+      "roles": [
+        {
+          "role_id": 1114,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1255,
+          "status": 1
+        },
+        {
+          "role_id": 1216,
+          "status": 1
+        },
+        {
+          "role_id": 1139,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668181,
+      "created_at": "2026-10-22 19:23:01",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3966,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 7000,
+      "team_key": "1248,1216,1027,1359,1043",
+      "roles": [
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1216,
+          "status": 1
+        },
+        {
+          "role_id": 1027,
+          "status": 1
+        },
+        {
+          "role_id": 1359,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3967,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1167,1302,1113,1287,1355",
+      "roles": [
+        {
+          "role_id": 1167,
+          "status": 1
+        },
+        {
+          "role_id": 1302,
+          "status": 1
+        },
+        {
+          "role_id": 1113,
+          "status": 1
+        },
+        {
+          "role_id": 1287,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3968,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1297,1167,1248,1809,1355",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1167,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1809,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3969,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1181,1060,1182,1067,1044",
+      "roles": [
+        {
+          "role_id": 1181,
+          "status": 1
+        },
+        {
+          "role_id": 1060,
+          "status": 1
+        },
+        {
+          "role_id": 1182,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3970,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 8000,
+      "team_key": "1060,1150,1241,1044,1139",
+      "roles": [
+        {
+          "role_id": 1060,
+          "status": 1
+        },
+        {
+          "role_id": 1150,
+          "status": 1
+        },
+        {
+          "role_id": 1241,
+          "status": 1
+        },
+        {
+          "role_id": 1044,
+          "status": 1
+        },
+        {
+          "role_id": 1139,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3971,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1103,1156,1173,1086,1056",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1156,
+          "status": 1
+        },
+        {
+          "role_id": 1173,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1056,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3972,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1103,1812,1199,1225,1104",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1199,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        },
+        {
+          "role_id": 1104,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3973,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1340,1352,1301,1353,1356",
+      "roles": [
+        {
+          "role_id": 1340,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        },
+        {
+          "role_id": 1356,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 1,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3974,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 9000,
+      "team_key": "1103,1170,1812,1199,1225",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1170,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1199,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3975,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1284,1265,1335,1070,1354",
+      "roles": [
+        {
+          "role_id": 1284,
+          "status": 1
+        },
+        {
+          "role_id": 1265,
+          "status": 1
+        },
+        {
+          "role_id": 1335,
+          "status": 1
+        },
+        {
+          "role_id": 1070,
+          "status": 1
+        },
+        {
+          "role_id": 1354,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3976,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1354,1346,1348,1808,1248",
+      "roles": [
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 简单SET 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3977,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1103,1170,1812,1199,1225",
+      "roles": [
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1170,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1199,
+          "status": 1
+        },
+        {
+          "role_id": 1225,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 简单SET 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3978,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 10000,
+      "team_key": "1246,1103,1049,1086,1043",
+      "roles": [
+        {
+          "role_id": 1246,
+          "status": 1
+        },
+        {
+          "role_id": 1103,
+          "status": 1
+        },
+        {
+          "role_id": 1049,
+          "status": 1
+        },
+        {
+          "role_id": 1086,
+          "status": 1
+        },
+        {
+          "role_id": 1043,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 纯AUTO 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3979,
+      "stage": 3,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 12000,
+      "team_key": "1354,1346,1808,1248,1321",
+      "roles": [
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1808,
+          "status": 1
+        },
+        {
+          "role_id": 1248,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 简单SET 返90s",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1dRn26CEFz",
+          "note": "",
+          "text": "肥团子 简单目押 返90s",
+          "image": []
+        }
+      ],
+      "timestamp": 1792668182,
+      "created_at": "2026-10-22 19:23:02",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3980,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 44000,
+      "team_key": "1181,1320,1806,1067,1331",
+      "roles": [
+        {
+          "role_id": 1181,
+          "status": 1
+        },
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 2,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 44000w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 41606w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792741988,
+      "created_at": "2026-10-23 15:53:08",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3981,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 36579,
+      "team_key": "1293,1346,1812,1295,1351",
+      "roles": [
+        {
+          "role_id": 1293,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1295,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 2,
+      "atk_value": 4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 36579w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792741988,
+      "created_at": "2026-10-23 15:53:08",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 3982,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 35517,
+      "team_key": "1297,1347,1355,1349,1311",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1349,
+          "status": 1
+        },
+        {
+          "role_id": 1311,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 2,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1ZynH65EeS",
+          "note": "",
+          "text": "澜轶BM 目押 35517w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792741988,
+      "created_at": "2026-10-23 15:53:08",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4004,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 28478,
+      "team_key": "1160,1354,1346,1207,1321",
+      "roles": [
+        {
+          "role_id": 1160,
+          "status": 1
+        },
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1207,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1XaHK6cEyN",
+          "note": "",
+          "text": "云烨朱云 开关SET 28478w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 22626w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 22269w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844480,
+      "created_at": "2026-10-24 20:21:20",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4005,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 29137,
+      "team_key": "1320,1338,1182,1223,1331",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1182,
+          "status": 1
+        },
+        {
+          "role_id": 1223,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 29137w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844860,
+      "created_at": "2026-10-24 20:27:40",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4006,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 2,
+      "damage": 24363,
+      "team_key": "1297,1167,1347,1355,1136",
+      "roles": [
+        {
+          "role_id": 1297,
+          "status": 1
+        },
+        {
+          "role_id": 1167,
+          "status": 1
+        },
+        {
+          "role_id": 1347,
+          "status": 1
+        },
+        {
+          "role_id": 1355,
+          "status": 1
+        },
+        {
+          "role_id": 1136,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 24363w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 24022w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844860,
+      "created_at": "2026-10-24 20:27:40",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4007,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 23017,
+      "team_key": "1068,1346,1348,1321,1351",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1321,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 23017w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 22769w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844860,
+      "created_at": "2026-10-24 20:27:40",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4008,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 16801,
+      "team_key": "1284,1335,1310,1354,1138",
+      "roles": [
+        {
+          "role_id": 1284,
+          "status": 1
+        },
+        {
+          "role_id": 1335,
+          "status": 1
+        },
+        {
+          "role_id": 1310,
+          "status": 1
+        },
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1138,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -4,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 16801w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844860,
+      "created_at": "2026-10-24 20:27:40",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4009,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 5,
+      "damage": 21616,
+      "team_key": "1265,1335,1310,1354,1309",
+      "roles": [
+        {
+          "role_id": 1265,
+          "status": 1
+        },
+        {
+          "role_id": 1335,
+          "status": 1
+        },
+        {
+          "role_id": 1310,
+          "status": 1
+        },
+        {
+          "role_id": 1354,
+          "status": 1
+        },
+        {
+          "role_id": 1309,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1VDJ46QEZs",
+          "note": "",
+          "text": "玩具喵 纯AUTO 21616w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792844860,
+      "created_at": "2026-10-24 20:27:40",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4022,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 29721,
+      "team_key": "1320,1338,1806,1067,1331",
+      "roles": [
+        {
+          "role_id": 1320,
+          "status": 1
+        },
+        {
+          "role_id": 1338,
+          "status": 1
+        },
+        {
+          "role_id": 1806,
+          "status": 1
+        },
+        {
+          "role_id": 1067,
+          "status": 1
+        },
+        {
+          "role_id": 1331,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -3,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 29721w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792911854,
+      "created_at": "2026-10-25 15:04:14",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4023,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 1,
+      "damage": 22051,
+      "team_key": "1084,1352,1301,1353,1356",
+      "roles": [
+        {
+          "role_id": 1084,
+          "status": 1
+        },
+        {
+          "role_id": 1352,
+          "status": 1
+        },
+        {
+          "role_id": 1301,
+          "status": 1
+        },
+        {
+          "role_id": 1353,
+          "status": 1
+        },
+        {
+          "role_id": 1356,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 2,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 22051w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792911854,
+      "created_at": "2026-10-25 15:04:14",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4024,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 3,
+      "damage": 34119,
+      "team_key": "1358,1317,1337,1325,1226",
+      "roles": [
+        {
+          "role_id": 1358,
+          "status": 1
+        },
+        {
+          "role_id": 1317,
+          "status": 1
+        },
+        {
+          "role_id": 1337,
+          "status": 1
+        },
+        {
+          "role_id": 1325,
+          "status": 1
+        },
+        {
+          "role_id": 1226,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": -5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 34119w",
+          "image": []
+        },
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 21550w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792911854,
+      "created_at": "2026-10-25 15:04:14",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4025,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 20067,
+      "team_key": "1346,1812,1295,1330,1351",
+      "roles": [
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1812,
+          "status": 1
+        },
+        {
+          "role_id": 1295,
+          "status": 1
+        },
+        {
+          "role_id": 1330,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1GwHg6MEt5",
+          "note": "",
+          "text": "昵称 纯AUTO 20067w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792911854,
+      "created_at": "2026-10-25 15:04:14",
+      "updated_at": null,
+      "included": true
+    },
+    {
+      "id": 4026,
+      "stage": 5,
+      "sn": null,
+      "otid": null,
+      "uid": 0,
+      "boss": 4,
+      "damage": 30203,
+      "team_key": "1068,1346,1324,1348,1351",
+      "roles": [
+        {
+          "role_id": 1068,
+          "status": 1
+        },
+        {
+          "role_id": 1346,
+          "status": 1
+        },
+        {
+          "role_id": 1324,
+          "status": 1
+        },
+        {
+          "role_id": 1348,
+          "status": 1
+        },
+        {
+          "role_id": 1351,
+          "status": 1
+        }
+      ],
+      "open": null,
+      "status": 1,
+      "auto": 1,
+      "atk_value": 5,
+      "remark": "",
+      "links": [
+        {
+          "url": "https://www.bilibili.com/video/BV1M9Hg6YEFc",
+          "note": "",
+          "text": "浮城墟烟 开关SET 30203w",
+          "image": []
+        }
+      ],
+      "timestamp": 1792912190,
+      "created_at": "2026-10-25 15:09:50",
+      "updated_at": null,
+      "included": true
+    }
+  ]
+}
