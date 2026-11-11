@@ -244,6 +244,9 @@ Route::prefix('user')->group(function () {
         // 更新新手指引状态或重置全部指引
         Route::post('guide-config', [UserGuideConfigController::class, 'update']);
 
+        // 重置当前用户的全部新手指引
+        Route::post('guide-config/reset', [UserGuideConfigController::class, 'reset']);
+
         // 获取上月系统三刀组合，游客和正式用户均可使用
         Route::post(
             'game/teams/triple/system/previous-month',

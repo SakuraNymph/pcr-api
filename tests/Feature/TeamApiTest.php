@@ -10,8 +10,10 @@ use App\Models\Role;
 use App\Models\Team;
 use App\Models\TeamLink;
 use Database\Seeders\TeamPermissionSeeder;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -74,14 +76,21 @@ class TeamApiTest extends TestCase
         $this->assertDatabaseHas('teams', ['stage' => 3, 'boss' => 1, 'damage' => 7000]);
         $this->assertDatabaseHas('teams', ['stage' => 3, 'boss' => 5, 'damage' => 12000]);
         $this->assertDatabaseHas('team_links', ['difficulty' => 1, 'damage' => 4200, 'status' => 1]);
+        $this->assertRoleUseTimes([
+            101 => 7,
+            102 => 7,
+            103 => 7,
+            104 => 7,
+            105 => 7,
+        ]);
 
         $list = $this->getJson('/api/admin/game/teams?status=1&page=1&pageSize=2');
         $list->assertOk()
             ->assertJsonCount(7, 'data')
             ->assertJsonPath('data.0.roles.0.nickname', '魔法角色');
 
-        GameRoleStatistics::create(['game_role_id' => 101, 'use_times' => 5]);
-        GameRoleStatistics::create(['game_role_id' => 102, 'use_times' => 50]);
+        GameRoleStatistics::updateOrCreate(['game_role_id' => 101], ['use_times' => 5]);
+        GameRoleStatistics::updateOrCreate(['game_role_id' => 102], ['use_times' => 50]);
         $options = $this->getJson('/api/admin/game/roles/options');
         $options->assertOk()
             ->assertJsonPath('data.0.id', 102)
@@ -256,7 +265,7 @@ class TeamApiTest extends TestCase
 
         $this->assertDatabaseCount('teams', 1);
         $this->assertDatabaseCount('team_links', 2);
-        $this->assertDatabaseCount('team_signature_locks', 1);
+        $this->assertDatabaseCount('team_signature_locks', 2);
         $this->assertDatabaseHas('teams', ['uid' => 0, 'stage' => 4, 'boss' => 1, 'damage' => 6000]);
         $this->assertSame(
             (int) Team::query()->value('id'),
@@ -319,9 +328,10 @@ class TeamApiTest extends TestCase
                 ->assertOk();
 
             $this->assertDatabaseCount('teams', 2);
-            $this->assertDatabaseCount('team_signature_locks', 2);
+            $this->assertDatabaseCount('team_signature_locks', 3);
             $this->assertDatabaseHas('team_signature_locks', ['year_month' => '2026-10']);
             $this->assertDatabaseHas('team_signature_locks', ['year_month' => '2026-11']);
+            $this->assertDatabaseHas('team_signature_locks', ['year_month' => '0000-00', 'mode' => 0]);
         } finally {
             Carbon::setTestNow();
         }
@@ -331,6 +341,10 @@ class TeamApiTest extends TestCase
     {
         $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 4, bosses: [1], damage: 5000))
             ->assertOk();
+        $this->assertRoleUseTimes([
+            101 => 1,
+            102 => 1,
+        ]);
         $hiddenTeam = Team::query()->firstOrFail();
         $hiddenLink = TeamLink::query()->firstOrFail();
         $this->deleteJson("/api/admin/game/teams/{$hiddenTeam->id}")
@@ -342,6 +356,10 @@ class TeamApiTest extends TestCase
         $this->assertDatabaseCount('teams', 1);
         $this->assertDatabaseCount('team_roles', 2);
         $this->assertDatabaseCount('team_links', 2);
+        $this->assertRoleUseTimes([
+            101 => 1,
+            102 => 1,
+        ]);
         $this->assertDatabaseHas('teams', ['id' => $hiddenTeam->id, 'status' => 1, 'damage' => 6000]);
         $this->assertDatabaseHas('team_links', ['id' => $hiddenLink->id, 'status' => 0]);
         $this->assertDatabaseHas('team_links', ['team_id' => $hiddenTeam->id, 'status' => 1, 'damage' => 6000]);
@@ -437,6 +455,176 @@ class TeamApiTest extends TestCase
         $this->assertDatabaseCount('team_links', 2);
     }
 
+    public function test_role_usage_counts_lineup_once_regardless_of_role_order_and_mode(): void
+    {
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 2,
+            bosses: [1],
+            damage: null,
+            roles: [101, 102, 103, 104, 105],
+        ))->assertOk();
+
+        $manualPayload = $this->batchPayload(
+            stage: 2,
+            bosses: [1],
+            damage: null,
+            roles: [105, 104, 103, 102, 101],
+            author: '手动作者',
+            link: 'https://example.com/manual',
+        );
+        $manualPayload['records'][0]['difficulty'] = 5;
+        $this->postJson('/api/admin/game/teams', $manualPayload)->assertOk();
+
+        $this->assertDatabaseCount('teams', 2);
+        $this->assertDatabaseCount('team_links', 2);
+        $this->assertDatabaseCount('team_signature_locks', 3);
+        $this->assertDatabaseHas('team_signature_locks', [
+            'year_month' => '0000-00',
+            'mode' => 0,
+            'stage' => 2,
+            'boss' => 1,
+            'team_key' => '102,103,104,101,105',
+        ]);
+        $this->assertRoleUseTimes([
+            101 => 1,
+            102 => 1,
+            103 => 1,
+            104 => 1,
+            105 => 1,
+        ]);
+    }
+
+    public function test_same_batch_duplicate_role_usage_key_counts_once_without_skipping_links(): void
+    {
+        $payload = $this->batchPayload(
+            stage: 4,
+            bosses: [1],
+            damage: 5000,
+            roles: [101, 102, 103, 104, 105],
+        );
+        $manualPayload = $this->batchPayload(
+            stage: 4,
+            bosses: [1],
+            damage: 6000,
+            roles: [105, 104, 103, 102, 101],
+            author: '批次手动作者',
+            link: 'https://example.com/batch-manual',
+        );
+        $manualPayload['records'][0]['difficulty'] = 5;
+        $payload['records'][] = $manualPayload['records'][0];
+
+        $this->postJson('/api/admin/game/teams', $payload)
+            ->assertOk()
+            ->assertJsonPath('data.count', 2);
+
+        $this->assertDatabaseCount('teams', 2);
+        $this->assertDatabaseCount('team_links', 2);
+        $this->assertRoleUseTimes([
+            101 => 1,
+            102 => 1,
+            103 => 1,
+            104 => 1,
+            105 => 1,
+        ]);
+    }
+
+    public function test_role_usage_counts_each_stage_and_boss_independently(): void
+    {
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 2,
+            bosses: [1, 2],
+            damage: null,
+            roles: [101, 102],
+        ))->assertOk();
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 3,
+            bosses: [1],
+            damage: null,
+            roles: [101, 103],
+            author: 'C阶段作者',
+            link: 'https://example.com/c-stage-heat',
+        ))->assertOk();
+
+        $this->assertRoleUseTimes([
+            101 => 3,
+            102 => 2,
+            103 => 1,
+        ]);
+    }
+
+    public function test_role_usage_supports_lineups_with_one_to_five_roles(): void
+    {
+        foreach (range(1, 5) as $size) {
+            $this->postJson('/api/admin/game/teams', $this->batchPayload(
+                stage: 4,
+                bosses: [$size],
+                damage: 5000 + $size,
+                roles: array_slice([101, 102, 103, 104, 105], 0, $size),
+                author: "角色数{$size}作者",
+                link: "https://example.com/lineup-size-{$size}",
+            ))->assertOk();
+        }
+
+        $this->assertRoleUseTimes([
+            101 => 5,
+            102 => 4,
+            103 => 3,
+            104 => 2,
+            105 => 1,
+        ]);
+    }
+
+    public function test_existing_role_usage_lock_prevents_increment(): void
+    {
+        DB::table('team_signature_locks')->insert([
+            'year_month' => '0000-00',
+            'team_key' => '102,101',
+            'mode' => 0,
+            'stage' => 2,
+            'boss' => 1,
+        ]);
+
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 2,
+            bosses: [1],
+            damage: null,
+            roles: [101, 102],
+        ))->assertOk();
+
+        $this->assertDatabaseCount('game_role_statistics', 0);
+    }
+
+    public function test_role_usage_rolls_back_when_statistics_update_fails(): void
+    {
+        DB::statement(
+            "CREATE TRIGGER fail_game_role_statistics_update
+            BEFORE UPDATE ON game_role_statistics
+            BEGIN
+                SELECT RAISE(ABORT, 'forced role statistics failure');
+            END"
+        );
+
+        try {
+            $this->withoutExceptionHandling()->postJson(
+                '/api/admin/game/teams',
+                $this->batchPayload(
+                    stage: 2,
+                    bosses: [1],
+                    damage: null,
+                    roles: [101, 102],
+                ),
+            );
+            $this->fail('统计更新失败时应抛出数据库异常。');
+        } catch (QueryException) {
+        }
+
+        $this->assertDatabaseCount('teams', 0);
+        $this->assertDatabaseCount('team_roles', 0);
+        $this->assertDatabaseCount('team_links', 0);
+        $this->assertDatabaseCount('team_signature_locks', 0);
+        $this->assertDatabaseCount('game_role_statistics', 0);
+    }
+
     public function test_team_permission_seeder_lists_actions_and_gives_super_admin_all_permissions(): void
     {
         $existingPermission = Permission::create([
@@ -523,6 +711,16 @@ class TeamApiTest extends TestCase
                 'roles' => $roles,
             ]],
         ];
+    }
+
+    private function assertRoleUseTimes(array $expected): void
+    {
+        foreach ($expected as $roleId => $useTimes) {
+            $this->assertDatabaseHas('game_role_statistics', [
+                'game_role_id' => $roleId,
+                'use_times' => $useTimes,
+            ]);
+        }
     }
 
     private function createTestTables(): void

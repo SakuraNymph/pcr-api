@@ -52,6 +52,7 @@ class UserGuideConfig extends Model
         'list',
         'post',
         'team',
+        'account',
         'group',
     ];
 
@@ -66,6 +67,7 @@ class UserGuideConfig extends Model
         'list' => true,
         'post' => true,
         'team' => true,
+        'account' => true,
         'group' => true,
     ];
 }

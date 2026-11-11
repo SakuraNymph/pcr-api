@@ -13,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class TeamService
 {
+    private const ROLE_USAGE_LOCK_YEAR_MONTH = '0000-00';
+
+    private const ROLE_USAGE_LOCK_MODE = 0;
+
     private const BOSS_HEALTH = [
         2 => [0, 4200, 4800, 5000, 5200, 6000],
         3 => [0, 7000, 8000, 9000, 10000, 12000],
@@ -128,6 +132,7 @@ class TeamService
     {
         return DB::transaction(function () use ($data): int {
             $linkCount = 0;
+            $processedRoleUsageKeys = [];
             $monthStart = now()->startOfMonth();
             $nextMonthStart = $monthStart->copy()->addMonthNoOverflow();
             $yearMonth = $monthStart->format('Y-m');
@@ -208,12 +213,63 @@ class TeamService
                         'damage' => max($teamDamage, $damage),
                         'status' => 1,
                     ]);
+                    $this->recordRoleUsage(
+                        $processedRoleUsageKeys,
+                        $roles,
+                        $stage,
+                        $boss,
+                        $teamKey,
+                    );
                     $linkCount++;
                 }
             }
 
             return $linkCount;
         }, 3);
+    }
+
+    private function recordRoleUsage(
+        array &$processedKeys,
+        Collection $roles,
+        int $stage,
+        int $boss,
+        string $teamKey,
+    ): void
+    {
+        $key = "{$stage}|{$boss}|{$teamKey}";
+
+        if (isset($processedKeys[$key])) {
+            return;
+        }
+
+        $processedKeys[$key] = true;
+
+        $inserted = DB::table('team_signature_locks')->insertOrIgnore([
+            'year_month' => self::ROLE_USAGE_LOCK_YEAR_MONTH,
+            'team_key' => $teamKey,
+            'mode' => self::ROLE_USAGE_LOCK_MODE,
+            'stage' => $stage,
+            'boss' => $boss,
+        ]);
+
+        if ($inserted !== 1) {
+            return;
+        }
+
+        $now = now();
+
+        foreach ($roles as $role) {
+            DB::table('game_role_statistics')->insertOrIgnore([
+                'game_role_id' => $role->id,
+                'use_times' => 0,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            DB::table('game_role_statistics')
+                ->where('game_role_id', $role->id)
+                ->increment('use_times', 1, ['updated_at' => $now]);
+        }
     }
 
     /** Update only the selected source link and keep team fields shared/read-only. */

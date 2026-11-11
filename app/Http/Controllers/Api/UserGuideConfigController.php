@@ -89,6 +89,12 @@ class UserGuideConfigController extends Controller
         $location = $validator->validated()['location'];
 
         return DB::transaction(function () use ($uid, $location) {
+            if ($location === 'reset') {
+                $this->resetConfiguration($uid);
+
+                return $this->success(null, '新手指引已重置');
+            }
+
             // 确保当前用户有配置记录。
             UserGuideConfig::firstOrCreate(
                 ['uid' => $uid],
@@ -103,23 +109,51 @@ class UserGuideConfigController extends Controller
             $configuration = $config->configuration
                 ?? UserGuideConfig::DEFAULT_CONFIGURATION;
 
-            if ($location === 'reset') {
-                // 重置所有指引为默认状态。
-                $configuration = UserGuideConfig::DEFAULT_CONFIGURATION;
-            } else {
-                // 只修改指定指引，保留其他配置。
-                $configuration[$location] = false;
-            }
+            // 只修改指定指引，保留其他配置。
+            $configuration[$location] = false;
 
             $config->configuration = $configuration;
             $config->save();
 
-            return $this->success(
-                null,
-                $location === 'reset'
-                    ? '新手指引已重置'
-                    : '新手指引状态已更新'
-            );
+            return $this->success(null, '新手指引状态已更新');
         });
+    }
+
+    /**
+     * 重置当前用户的全部新手指引
+     */
+    public function reset(): JsonResponse
+    {
+        $uid = $this->uid();
+
+        if ($uid === null) {
+            return $this->error('请先登录', 401);
+        }
+
+        DB::transaction(function () use ($uid): void {
+            $this->resetConfiguration($uid);
+        });
+
+        return $this->success(null, '新手指引已重置');
+    }
+
+    /**
+     * 将指定用户的全部新手指引恢复为默认值
+     *
+     * 调用方必须在事务内执行。
+     */
+    private function resetConfiguration(int $uid): void
+    {
+        UserGuideConfig::firstOrCreate(
+            ['uid' => $uid],
+            ['configuration' => UserGuideConfig::DEFAULT_CONFIGURATION]
+        );
+
+        $config = UserGuideConfig::where('uid', $uid)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $config->configuration = UserGuideConfig::DEFAULT_CONFIGURATION;
+        $config->save();
     }
 }

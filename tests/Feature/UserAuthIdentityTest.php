@@ -135,6 +135,318 @@ class UserAuthIdentityTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_completing_post_guide_does_not_disable_list_guide(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=post')
+            ->assertOk()
+            ->assertContent('true');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config', ['location' => 'post'])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=post')
+            ->assertOk()
+            ->assertContent('false');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=list')
+            ->assertOk()
+            ->assertContent('true');
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertFalse($configuration['post']);
+        $this->assertTrue($configuration['list']);
+    }
+
+    public function test_completing_team_guide_does_not_disable_post_or_list(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=team')
+            ->assertOk()
+            ->assertContent('true');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config', ['location' => 'team'])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=team')
+            ->assertOk()
+            ->assertContent('false');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=post')
+            ->assertOk()
+            ->assertContent('true');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=list')
+            ->assertOk()
+            ->assertContent('true');
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertFalse($configuration['team']);
+        $this->assertTrue($configuration['post']);
+        $this->assertTrue($configuration['list']);
+    }
+
+    public function test_completing_group_guide_does_not_disable_other_guides(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=group')
+            ->assertOk()
+            ->assertContent('true');
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config', ['location' => 'group'])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->getJson('/api/user/guide-config?location=group')
+            ->assertOk()
+            ->assertContent('false');
+
+        foreach (['list', 'post', 'team', 'account'] as $location) {
+            $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+                ->getJson('/api/user/guide-config?location='.$location)
+                ->assertOk()
+                ->assertContent('true');
+        }
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertFalse($configuration['group']);
+        $this->assertTrue($configuration['list']);
+        $this->assertTrue($configuration['post']);
+        $this->assertTrue($configuration['team']);
+        $this->assertTrue($configuration['account']);
+    }
+
+    public function test_account_guide_defaults_and_is_isolated_from_other_guides(): void
+    {
+        $user = $this->createUser('account-guide@example.com', 'secret', 1);
+        $token = $user->createToken('user-token')->plainTextToken;
+        $authorization = 'Bearer '.$token;
+
+        $this->withHeader('Authorization', $authorization)
+            ->getJson('/api/user/guide-config?location=account')
+            ->assertOk()
+            ->assertContent('true');
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $user->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        foreach (['account', 'list', 'post', 'team', 'group'] as $location) {
+            $this->assertTrue($configuration[$location]);
+        }
+
+        $this->withHeader('Authorization', $authorization)
+            ->postJson('/api/user/guide-config', ['location' => 'account'])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->withHeader('Authorization', $authorization)
+            ->getJson('/api/user/guide-config?location=account')
+            ->assertOk()
+            ->assertContent('false');
+
+        $this->withHeader('Authorization', $authorization)
+            ->getJson('/api/user/guide-config?location=list')
+            ->assertOk()
+            ->assertContent('true');
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $user->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertFalse($configuration['account']);
+        $this->assertTrue($configuration['list']);
+        $this->assertTrue($configuration['post']);
+        $this->assertTrue($configuration['team']);
+        $this->assertTrue($configuration['group']);
+
+        $this->withHeader('Authorization', $authorization)
+            ->postJson('/api/user/guide-config', ['location' => 'reset'])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->withHeader('Authorization', $authorization)
+            ->getJson('/api/user/guide-config?location=account')
+            ->assertOk()
+            ->assertContent('true');
+    }
+
+    public function test_guide_reset_endpoint_restores_all_defaults(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        UserGuideConfig::create([
+            'uid' => $guest->getKey(),
+            'configuration' => array_fill_keys(UserGuideConfig::LOCATIONS, false),
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config/reset')
+            ->assertOk()
+            ->assertJsonPath('status', 0)
+            ->assertJsonPath('code', 200)
+            ->assertJsonPath('msg', '新手指引已重置')
+            ->assertJsonPath('data', null);
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        foreach (UserGuideConfig::LOCATIONS as $location) {
+            $this->assertTrue($configuration[$location]);
+        }
+
+        foreach (UserGuideConfig::LOCATIONS as $location) {
+            $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+                ->getJson('/api/user/guide-config?location='.$location)
+                ->assertOk()
+                ->assertContent('true');
+        }
+    }
+
+    public function test_guide_reset_endpoint_creates_default_record_when_missing(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        $this->assertDatabaseMissing('user_guide_configs', [
+            'uid' => $guest->getKey(),
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config/reset')
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $this->assertDatabaseHas('user_guide_configs', [
+            'uid' => $guest->getKey(),
+        ]);
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        foreach (UserGuideConfig::LOCATIONS as $location) {
+            $this->assertTrue($configuration[$location]);
+        }
+    }
+
+    public function test_guide_reset_endpoint_only_resets_current_user(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+        $other = $this->createUser('other@example.com', 'secret', 0);
+
+        foreach ([$guest, $other] as $user) {
+            UserGuideConfig::create([
+                'uid' => $user->getKey(),
+                'configuration' => array_fill_keys(UserGuideConfig::LOCATIONS, false),
+            ]);
+        }
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config/reset')
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $currentConfiguration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+        $otherConfiguration = UserGuideConfig::query()
+            ->where('uid', $other->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertTrue($currentConfiguration['list']);
+        $this->assertFalse($otherConfiguration['list']);
+    }
+
+    public function test_registered_user_can_reset_guide_config(): void
+    {
+        $user = $this->createUser('owner@example.com', 'secret', 1);
+        $token = $user->createToken('user-token')->plainTextToken;
+
+        UserGuideConfig::create([
+            'uid' => $user->getKey(),
+            'configuration' => array_fill_keys(UserGuideConfig::LOCATIONS, false),
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/user/guide-config/reset')
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $user->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        $this->assertTrue($configuration['list']);
+    }
+
+    public function test_guide_reset_endpoint_requires_authentication(): void
+    {
+        $this->postJson('/api/user/guide-config/reset')
+            ->assertUnauthorized();
+    }
+
+    public function test_update_guide_config_reset_location_still_resets_all(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        UserGuideConfig::create([
+            'uid' => $guest->getKey(),
+            'configuration' => array_fill_keys(UserGuideConfig::LOCATIONS, false),
+        ]);
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/guide-config', ['location' => 'reset'])
+            ->assertOk()
+            ->assertJsonPath('status', 0)
+            ->assertJsonPath('msg', '新手指引已重置');
+
+        $configuration = UserGuideConfig::query()
+            ->where('uid', $guest->getKey())
+            ->firstOrFail()
+            ->configuration;
+
+        foreach (UserGuideConfig::LOCATIONS as $location) {
+            $this->assertTrue($configuration[$location]);
+        }
+    }
+
     public function test_visitor_token_reaches_guest_only_register_validation(): void
     {
         [, $visitorToken] = $this->makeVisitor();
