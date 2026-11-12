@@ -4,19 +4,30 @@ namespace App\Services;
 
 use App\Models\SystemSixHitCacheSet;
 use App\Models\SystemSixHitResultCache;
-use App\Models\SystemSixHitTriple;
 use App\Models\Team;
 use App\Models\UserRolePool;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class SystemSixHitService
 {
-    private const ALGORITHM_VERSION = 6;
+    private const ALGORITHM_VERSION = 7;
 
     private const RESULT_LIMIT = 10;
+
+    private const RESULT_CACHE_TTL_SECONDS = 3600;
+
+    private const CACHE_LOCK_SECONDS = 120;
+
+    private const CACHE_LOCK_WAIT_SECONDS = 15;
+
+    private const RESULT_CACHE_KEY_PREFIX = 'six-hit:final:v1:';
+
+    private const RESULT_CACHE_LOCK_PREFIX = 'six-hit:lock:final:';
 
     // 先走旧项目的前少量候选快路径，合法结果不足时逐级扩大。
     private const CANDIDATE_LIMITS = [5, 10, 20, 40];
@@ -176,14 +187,6 @@ class SystemSixHitService
             $lowState,
             $highState
         );
-        $cacheSet = $this->getOrCreateCacheSet(
-            $yearMonth,
-            $difficulty,
-            $sourceSignature,
-            $lowState,
-            $highState
-        );
-
         $filters = $this->normalizeFilters(
             $lowBosses,
             $highBosses,
@@ -195,7 +198,9 @@ class SystemSixHitService
         );
         $filterHash = $this->filterHash($filters);
         $cacheKey = $this->resultCacheKey(
-            $cacheSet->id,
+            $yearMonth,
+            $difficulty,
+            $sourceSignature,
             $endpoint,
             $uid,
             $accountId,
@@ -206,79 +211,137 @@ class SystemSixHitService
 
         if ($cached !== null) {
             return $this->presentResults(
-                $cached->results,
+                $cached,
                 $snapshots,
                 $accountRoles
             );
         }
 
-        $roleMask = new SystemSixHitRoleMask(
-            $this->collectRoleIds($snapshots)
+        $lock = Cache::lock(
+            self::RESULT_CACHE_LOCK_PREFIX.$cacheKey,
+            self::CACHE_LOCK_SECONDS
         );
-        $publicTeams = $this->makeTeamComputationData(
-            $snapshots,
-            $roleMask,
-            null
-        );
-        $accountTeams = $accountRoles === null
-            ? $publicTeams
-            : $this->makeTeamComputationData(
+        $locked = false;
+
+        try {
+            try {
+                $lock->block(self::CACHE_LOCK_WAIT_SECONDS);
+                $locked = true;
+            } catch (LockTimeoutException) {
+                $cached = $this->findResultCache($cacheKey);
+
+                if ($cached !== null) {
+                    return $this->presentResults(
+                        $cached,
+                        $snapshots,
+                        $accountRoles
+                    );
+                }
+            }
+
+            $cached = $this->findResultCache($cacheKey);
+
+            if ($cached !== null) {
+                return $this->presentResults(
+                    $cached,
+                    $snapshots,
+                    $accountRoles
+                );
+            }
+
+            $roleMask = new SystemSixHitRoleMask(
+                $this->collectRoleIds($snapshots)
+            );
+            $publicTeams = $this->makeTeamComputationData(
                 $snapshots,
                 $roleMask,
+                null
+            );
+            $accountTeams = $accountRoles === null
+                ? $publicTeams
+                : $this->makeTeamComputationData(
+                    $snapshots,
+                    $roleMask,
+                    $accountRoles
+                );
+            $usableTeamIds = $accountRoles === null
+                ? null
+                : $this->usableTeamIds($accountTeams);
+
+            $lowCombinations = $this->systemTripleService
+                ->buildCombinationsForState($lowState);
+            $highCombinations = $this->systemTripleService
+                ->buildCombinationsForState($highState);
+
+            $lowCandidates = $this->buildTripleCandidates(
+                $lowCombinations,
+                self::SIDE_LOW,
+                $stage,
+                0,
+                $filters['lowBosses'],
+                $snapshots,
+                $usableTeamIds,
+                self::MAX_CANDIDATE_LIMIT,
+                $lowLockedIds,
+                $hiddenIds
+            );
+            $highCandidates = $this->buildTripleCandidates(
+                $highCombinations,
+                self::SIDE_HIGH,
+                0,
+                $atkType,
+                $filters['highBosses'],
+                $snapshots,
+                $usableTeamIds,
+                self::MAX_CANDIDATE_LIMIT,
+                $highLockedIds,
+                $hiddenIds
+            );
+
+            $results = $this->searchTopPackages(
+                $lowCandidates,
+                $highCandidates,
+                $snapshots,
+                $roleMask,
+                $publicTeams,
+                $accountTeams,
+                $endpoint
+            );
+
+            if ($locked) {
+                $cacheSet = $this->getOrCreateCacheSet(
+                    $yearMonth,
+                    $difficulty,
+                    $sourceSignature,
+                    $lowState,
+                    $highState,
+                    count($lowCombinations),
+                    count($highCombinations)
+                );
+
+                $this->storeResultCache(
+                    $cacheSet->id,
+                    $endpoint,
+                    $uid,
+                    $accountId,
+                    $rolePoolHash,
+                    $filterHash,
+                    $cacheKey,
+                    $filters,
+                    $results
+                );
+            }
+
+            return $this->presentResults(
+                $results,
+                $snapshots,
                 $accountRoles
             );
-        $usableTeamIds = $accountRoles === null
-            ? null
-            : $this->usableTeamIds($accountTeams);
-
-        $lowCandidates = $this->loadTripleCandidates(
-            $cacheSet->id,
-            self::SIDE_LOW,
-            $stage,
-            0,
-            $filters['lowBosses'],
-            $snapshots,
-            $usableTeamIds,
-            self::MAX_CANDIDATE_LIMIT,
-            $lowLockedIds,
-            $hiddenIds
-        );
-        $highCandidates = $this->loadTripleCandidates(
-            $cacheSet->id,
-            self::SIDE_HIGH,
-            0,
-            $atkType,
-            $filters['highBosses'],
-            $snapshots,
-            $usableTeamIds,
-            self::MAX_CANDIDATE_LIMIT,
-            $highLockedIds,
-            $hiddenIds
-        );
-
-        $results = $this->searchTopPackages(
-            $lowCandidates,
-            $highCandidates,
-            $snapshots,
-            $roleMask,
-            $publicTeams,
-            $accountTeams,
-            $endpoint
-        );
-
-        $this->storeResultCache(
-            $cacheSet->id,
-            $endpoint,
-            $uid,
-            $accountId,
-            $rolePoolHash,
-            $filterHash,
-            $cacheKey,
-            $filters,
-            $results
-        );
-
-        return $this->presentResults($results, $snapshots, $accountRoles);
+        } finally {
+            if ($locked) {
+                $lock->release();
+            }
+        }
     }
 
     /**
@@ -359,115 +422,87 @@ class SystemSixHitService
     /**
      * @param  array<string, mixed>  $lowState
      * @param  array<string, mixed>  $highState
+     *
+     * 过渡期仅为旧结果缓存表提供 cache_set 元数据；旧结果表退场后可一并移除。
      */
     private function getOrCreateCacheSet(
         string $yearMonth,
         int $difficulty,
         string $sourceSignature,
         array $lowState,
-        array $highState
+        array $highState,
+        int $lowTripleCount,
+        int $highTripleCount
     ): SystemSixHitCacheSet {
-        $existing = SystemSixHitCacheSet::query()
+        $cacheSet = SystemSixHitCacheSet::query()
             ->where('year_month', $yearMonth)
             ->where('mode', $difficulty)
             ->where('source_signature', $sourceSignature)
             ->first();
 
-        if ($existing !== null && $existing->generated_at !== null) {
-            return $existing;
+        if ($cacheSet !== null && $cacheSet->generated_at !== null) {
+            return $cacheSet;
         }
 
-        $lowCombinations = $this->systemTripleService
-            ->buildCombinationsForState($lowState);
-        $highCombinations = $this->systemTripleService
-            ->buildCombinationsForState($highState);
         $now = now();
+        DB::table('system_six_hit_cache_sets')->insertOrIgnore([
+            'year_month' => $yearMonth,
+            'mode' => $difficulty,
+            'algorithm_version' => self::ALGORITHM_VERSION,
+            'source_signature' => $sourceSignature,
+            'low_team_count' => $lowState['team_count'],
+            'high_team_count' => $highState['team_count'],
+            'low_triple_count' => $lowTripleCount,
+            'high_triple_count' => $highTripleCount,
+            'generated_at' => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
 
-        DB::transaction(function () use (
-            $yearMonth,
-            $difficulty,
-            $sourceSignature,
-            $lowState,
-            $highState,
-            $lowCombinations,
-            $highCombinations,
-            $now
-        ): void {
-            DB::table('system_six_hit_cache_sets')->insertOrIgnore([
-                'year_month' => $yearMonth,
-                'mode' => $difficulty,
-                'algorithm_version' => self::ALGORITHM_VERSION,
-                'source_signature' => $sourceSignature,
-                'low_team_count' => 0,
-                'high_team_count' => 0,
-                'low_triple_count' => 0,
-                'high_triple_count' => 0,
-                'generated_at' => null,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
-
-            $cacheSet = SystemSixHitCacheSet::query()
-                ->where('year_month', $yearMonth)
-                ->where('mode', $difficulty)
-                ->where('source_signature', $sourceSignature)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            if ($cacheSet->generated_at !== null) {
-                return;
-            }
-
-            $rows = array_merge(
-                $this->makeTripleRows(
-                    $cacheSet->id,
-                    self::SIDE_LOW,
-                    $lowState,
-                    $lowCombinations,
-                    $now
-                ),
-                $this->makeTripleRows(
-                    $cacheSet->id,
-                    self::SIDE_HIGH,
-                    $highState,
-                    $highCombinations,
-                    $now
-                )
-            );
-
-            foreach (array_chunk($rows, 500) as $chunk) {
-                DB::table('system_six_hit_triples')->insert($chunk);
-            }
-
-            $cacheSet->forceFill([
-                'low_team_count' => $lowState['team_count'],
-                'high_team_count' => $highState['team_count'],
-                'low_triple_count' => count($lowCombinations),
-                'high_triple_count' => count($highCombinations),
-                'generated_at' => $now,
-            ])->save();
-        }, 3);
-
-        return SystemSixHitCacheSet::query()
+        $cacheSet = SystemSixHitCacheSet::query()
             ->where('year_month', $yearMonth)
             ->where('mode', $difficulty)
             ->where('source_signature', $sourceSignature)
             ->firstOrFail();
+
+        if ($cacheSet->generated_at === null) {
+            $cacheSet->forceFill([
+                'low_team_count' => $lowState['team_count'],
+                'high_team_count' => $highState['team_count'],
+                'low_triple_count' => $lowTripleCount,
+                'high_triple_count' => $highTripleCount,
+                'generated_at' => $now,
+            ])->save();
+        }
+
+        return $cacheSet;
     }
 
     /**
-     * @param  array<string, mixed>  $state
      * @param  array<int, array<int, int>>  $combinations
+     * @param  array<int, int>  $selectedBosses
+     * @param  array<int, array<string, mixed>>  $snapshots
+     * @param  array<int, bool>|null  $usableTeamIds
+     * @param  array<int, int>  $lockedIds
+     * @param  array<int, int>  $hiddenIds
      * @return array<int, array<string, mixed>>
      */
-    private function makeTripleRows(
-        int $cacheSetId,
-        int $side,
-        array $state,
+    private function buildTripleCandidates(
         array $combinations,
-        Carbon $now
+        int $side,
+        int $stage,
+        int $atkType,
+        array $selectedBosses,
+        array $snapshots,
+        ?array $usableTeamIds,
+        int $limit,
+        array $lockedIds = [],
+        array $hiddenIds = []
     ): array {
-        $snapshots = $state['snapshots'];
+        $selectedBosses = $this->normalizeBosses($selectedBosses);
+        $lockedLookup = array_fill_keys($lockedIds, true);
+        $hiddenLookup = array_fill_keys($hiddenIds, true);
+        $lockedCount = count($lockedLookup);
         $rows = [];
 
         foreach ($combinations as $teamIds) {
@@ -485,7 +520,6 @@ class SystemSixHitService
             });
             $canonicalIds = $orderedIds;
             sort($canonicalIds, SORT_NUMERIC);
-            $bosses = [];
             $stageCounts = [2 => 0, 3 => 0, 4 => 0];
             $atkPositiveCount = 0;
             $atkNonpositiveCount = 0;
@@ -494,114 +528,75 @@ class SystemSixHitService
             foreach ($orderedIds as $teamId) {
                 $snapshot = $snapshots[$teamId];
                 $boss = (int) $snapshot['boss'];
-                $stage = (int) $snapshot['stage'];
-                $atkValue = (int) $snapshot['atk_value'];
-                $bosses[] = $boss;
-                $stageCounts[$stage] = ($stageCounts[$stage] ?? 0) + 1;
+                $stageCounts[(int) $snapshot['stage']] =
+                    ($stageCounts[(int) $snapshot['stage']] ?? 0) + 1;
                 $scoreTenths += (int) $snapshot['damage']
                     * (self::MULTIPLIER_TENTHS[$boss] ?? 0);
 
-                if ($atkValue >= 0) {
+                if ((int) $snapshot['atk_value'] >= 0) {
                     $atkPositiveCount++;
                 }
 
-                if ($atkValue <= 0) {
+                if ((int) $snapshot['atk_value'] <= 0) {
                     $atkNonpositiveCount++;
                 }
             }
 
+            if ($side === self::SIDE_LOW) {
+                if ($stage === 2 && ($stageCounts[2] ?? 0) !== 3) {
+                    continue;
+                }
+
+                if ($stage === 3 && ($stageCounts[3] ?? 0) !== 3) {
+                    continue;
+                }
+            } else {
+                $atkMatches = match ($atkType) {
+                    1 => $atkPositiveCount === 3,
+                    2 => $atkPositiveCount === 2
+                        && $atkNonpositiveCount === 1,
+                    3 => $atkPositiveCount === 1
+                        && $atkNonpositiveCount === 2,
+                    4 => $atkNonpositiveCount === 3,
+                    default => true,
+                };
+
+                if (! $atkMatches) {
+                    continue;
+                }
+            }
+
             $rows[] = [
-                'cache_set_id' => $cacheSetId,
-                'side' => $side,
-                'team_1_id' => $canonicalIds[0],
-                'team_2_id' => $canonicalIds[1],
-                'team_3_id' => $canonicalIds[2],
-                'team_ids' => json_encode($orderedIds, JSON_THROW_ON_ERROR),
-                'boss_1' => $bosses[0],
-                'boss_2' => $bosses[1],
-                'boss_3' => $bosses[2],
+                'team_ids' => $orderedIds,
+                'canonical_ids' => $canonicalIds,
                 'score_tenths' => $scoreTenths,
-                'stage_2_count' => $stageCounts[2] ?? 0,
-                'stage_3_count' => $stageCounts[3] ?? 0,
-                'stage_4_count' => $stageCounts[4] ?? 0,
-                'atk_positive_count' => $atkPositiveCount,
-                'atk_nonpositive_count' => $atkNonpositiveCount,
-                'created_at' => $now,
-                'updated_at' => $now,
             ];
         }
 
-        return $rows;
-    }
+        usort($rows, static function (array $left, array $right): int {
+            $scoreComparison = $right['score_tenths']
+                <=> $left['score_tenths'];
 
-    /**
-     * @param  array<int, int>  $selectedBosses
-     * @param  array<int, int>  $lockedIds
-     * @param  array<int, int>  $hiddenIds
-     * @param  array<int, array<string, mixed>>  $snapshots
-     * @param  array<int, bool>|null  $usableTeamIds
-     * @return array<int, array<string, mixed>>
-     */
-    private function loadTripleCandidates(
-        int $cacheSetId,
-        int $side,
-        int $stage,
-        int $atkType,
-        array $selectedBosses,
-        array $snapshots,
-        ?array $usableTeamIds,
-        int $limit,
-        array $lockedIds = [],
-        array $hiddenIds = []
-    ): array {
-        $query = SystemSixHitTriple::query()
-            ->where('cache_set_id', $cacheSetId)
-            ->where('side', $side);
+            if ($scoreComparison !== 0) {
+                return $scoreComparison;
+            }
 
-        if ($side === self::SIDE_LOW && $stage === 2) {
-            $query->where('stage_2_count', 3);
-        } elseif ($side === self::SIDE_LOW && $stage === 3) {
-            $query->where('stage_3_count', 3);
-        }
+            foreach ([0, 1, 2] as $index) {
+                $comparison = $left['canonical_ids'][$index]
+                    <=> $right['canonical_ids'][$index];
 
-        if ($side === self::SIDE_HIGH) {
-            match ($atkType) {
-                1 => $query
-                    ->where('atk_positive_count', 3),
-                2 => $query
-                    ->where('atk_positive_count', 2)
-                    ->where('atk_nonpositive_count', 1),
-                3 => $query
-                    ->where('atk_positive_count', 1)
-                    ->where('atk_nonpositive_count', 2),
-                4 => $query
-                    ->where('atk_nonpositive_count', 3),
-                default => null,
-            };
-        }
+                if ($comparison !== 0) {
+                    return $comparison;
+                }
+            }
 
-        $selectedBosses = array_values(array_filter(
-            array_map('intval', $selectedBosses),
-            static fn (int $boss): bool => $boss > 0
-        ));
-        sort($selectedBosses, SORT_NUMERIC);
-        $lockedLookup = array_fill_keys($lockedIds, true);
-        $hiddenLookup = array_fill_keys($hiddenIds, true);
-        $lockedCount = count($lockedLookup);
+            return 0;
+        });
+
         $candidates = [];
 
-        $rows = $query
-            ->orderByDesc('score_tenths')
-            ->orderBy('team_1_id')
-            ->orderBy('team_2_id')
-            ->orderBy('team_3_id')
-            ->cursor();
-
         foreach ($rows as $row) {
-            $teamIds = array_map(
-                static fn (mixed $teamId): int => (int) $teamId,
-                $row->team_ids
-            );
+            $teamIds = $row['team_ids'];
 
             if ($hiddenLookup !== []) {
                 $hasHiddenTeam = false;
@@ -657,12 +652,10 @@ class SystemSixHitService
                 continue;
             }
 
-            $canonicalIds = $teamIds;
-            sort($canonicalIds, SORT_NUMERIC);
             $candidates[] = [
                 'team_ids' => $teamIds,
-                'canonical_ids' => $canonicalIds,
-                'score_tenths' => (int) $row->score_tenths,
+                'canonical_ids' => $row['canonical_ids'],
+                'score_tenths' => $row['score_tenths'],
             ];
 
             if (count($candidates) >= $limit) {
@@ -1728,8 +1721,14 @@ class SystemSixHitService
         ));
     }
 
+    /**
+     * 最终结果缓存 Key 必须覆盖所有影响计算结果的输入：
+     * 年月、难度、数据签名、接口类型、用户、账号、角色池、筛选条件和算法版本。
+     */
     private function resultCacheKey(
-        int $cacheSetId,
+        string $yearMonth,
+        int $difficulty,
+        string $sourceSignature,
         int $endpoint,
         ?int $uid,
         ?int $accountId,
@@ -1737,7 +1736,9 @@ class SystemSixHitService
         string $filterHash
     ): string {
         return hash('sha256', json_encode([
-            'cache_set_id' => $cacheSetId,
+            'year_month' => $yearMonth,
+            'difficulty' => $difficulty,
+            'source_signature' => $sourceSignature,
             'endpoint' => $endpoint,
             'uid' => $uid,
             'account_id' => $accountId,
@@ -1747,14 +1748,45 @@ class SystemSixHitService
         ], JSON_THROW_ON_ERROR));
     }
 
-    private function findResultCache(string $cacheKey): ?SystemSixHitResultCache
+    private function resultCacheStoreKey(string $cacheKey): string
     {
-        return SystemSixHitResultCache::query()
-            ->where('cache_key', $cacheKey)
-            ->first();
+        return self::RESULT_CACHE_KEY_PREFIX.$cacheKey;
     }
 
     /**
+     * 过渡兼容：Laravel Cache 未命中时读取旧结果表，并立即回填 Laravel Cache。
+     * 该回退只用于观察期，不应成为长期读取路径。
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function findResultCache(string $cacheKey): ?array
+    {
+        $cached = Cache::get($this->resultCacheStoreKey($cacheKey));
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $legacy = SystemSixHitResultCache::query()
+            ->where('cache_key', $cacheKey)
+            ->first();
+
+        if ($legacy === null || ! is_array($legacy->results)) {
+            return null;
+        }
+
+        Cache::put(
+            $this->resultCacheStoreKey($cacheKey),
+            $legacy->results,
+            now()->addSeconds(self::RESULT_CACHE_TTL_SECONDS)
+        );
+
+        return $legacy->results;
+    }
+
+    /**
+     * Laravel Cache 是主缓存；旧结果表仅保留为过渡回退副本。
+     *
      * @param  array<string, mixed>  $filters
      * @param  array<int, array<string, mixed>>  $results
      */
@@ -1770,6 +1802,12 @@ class SystemSixHitService
         array $results
     ): void {
         $now = now();
+
+        Cache::put(
+            $this->resultCacheStoreKey($cacheKey),
+            $results,
+            $now->copy()->addSeconds(self::RESULT_CACHE_TTL_SECONDS)
+        );
 
         DB::table('system_six_hit_result_caches')->insertOrIgnore([
             'cache_set_id' => $cacheSetId,

@@ -10,9 +10,11 @@ use App\Models\TeamLink;
 use App\Models\TeamRole;
 use App\Models\User;
 use App\Models\UserRolePool;
+use App\Services\SystemSixHitService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
@@ -430,7 +432,7 @@ class SystemSixHitApiTest extends TestCase
             ->json('data');
 
         $this->assertCount(10, $packages);
-        $this->assertDatabaseCount('system_six_hit_triples', 30);
+        $this->assertDatabaseCount('system_six_hit_triples', 0);
     }
 
     public function test_current_missing_role_is_borrowed_and_status_is_account_aware(): void
@@ -515,19 +517,154 @@ class SystemSixHitApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::CURRENT_URL, [
+        $first = $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
             'lowBosses' => [1],
             'highBosses' => [1],
-        ])->assertOk()->assertJsonCount(1, 'data');
-        $this->postJson(self::CURRENT_URL, [
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data');
+        $second = $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
             'lowBosses' => [1],
             'highBosses' => [1],
-        ])->assertOk()->assertJsonCount(1, 'data');
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data');
 
+        $this->assertSame($first, $second);
         $this->assertDatabaseCount('system_six_hit_cache_sets', 1);
         $this->assertDatabaseCount('system_six_hit_result_caches', 1);
+        $this->assertDatabaseCount('system_six_hit_triples', 0);
+
+        SystemSixHitResultCache::query()->delete();
+        $third = $this->postJson(self::CURRENT_URL, [
+            'accountId' => $pool->id,
+            'lowBosses' => [1],
+            'highBosses' => [1],
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data');
+
+        $this->assertSame($first, $third);
+        $this->assertDatabaseCount('system_six_hit_result_caches', 0);
+    }
+
+    public function test_result_cache_key_covers_all_computation_inputs(): void
+    {
+        $service = $this->app->make(SystemSixHitService::class);
+        $method = new \ReflectionMethod($service, 'resultCacheKey');
+        $algorithmVersion = (new \ReflectionClassConstant(
+            SystemSixHitService::class,
+            'ALGORITHM_VERSION'
+        ))->getValue();
+        $sourceSignature = str_repeat('a', 64);
+        $rolePoolHash = hash('sha256', 'roles:1,2,3');
+        $filterHash = hash('sha256', 'filters:default');
+        $arguments = [
+            '202611',
+            3,
+            $sourceSignature,
+            1,
+            7,
+            9,
+            $rolePoolHash,
+            $filterHash,
+        ];
+        $key = $method->invokeArgs($service, $arguments);
+        $expected = hash('sha256', json_encode([
+            'year_month' => '202611',
+            'difficulty' => 3,
+            'source_signature' => $sourceSignature,
+            'endpoint' => 1,
+            'uid' => 7,
+            'account_id' => 9,
+            'role_pool_hash' => $rolePoolHash,
+            'filter_hash' => $filterHash,
+            'algorithm_version' => $algorithmVersion,
+        ], JSON_THROW_ON_ERROR));
+
+        $this->assertSame($expected, $key);
+
+        $variants = [
+            ['202612', 3, $sourceSignature, 1, 7, 9, $rolePoolHash, $filterHash],
+            ['202611', 4, $sourceSignature, 1, 7, 9, $rolePoolHash, $filterHash],
+            ['202611', 3, str_repeat('b', 64), 1, 7, 9, $rolePoolHash, $filterHash],
+            ['202611', 3, $sourceSignature, 2, null, null, null, $filterHash],
+            ['202611', 3, $sourceSignature, 1, 8, 9, $rolePoolHash, $filterHash],
+            ['202611', 3, $sourceSignature, 1, 7, 10, $rolePoolHash, $filterHash],
+            [
+                '202611',
+                3,
+                $sourceSignature,
+                1,
+                7,
+                9,
+                hash('sha256', 'roles:other'),
+                $filterHash,
+            ],
+            [
+                '202611',
+                3,
+                $sourceSignature,
+                1,
+                7,
+                9,
+                $rolePoolHash,
+                hash('sha256', 'filters:other'),
+            ],
+        ];
+
+        foreach ($variants as $variant) {
+            $this->assertNotSame($key, $method->invokeArgs($service, $variant));
+        }
+
+        $differentVersionKey = hash('sha256', json_encode([
+            'year_month' => '202611',
+            'difficulty' => 3,
+            'source_signature' => $sourceSignature,
+            'endpoint' => 1,
+            'uid' => 7,
+            'account_id' => 9,
+            'role_pool_hash' => $rolePoolHash,
+            'filter_hash' => $filterHash,
+            'algorithm_version' => $algorithmVersion + 1,
+        ], JSON_THROW_ON_ERROR));
+
+        $this->assertNotSame($key, $differentVersionKey);
+    }
+
+    public function test_legacy_result_cache_is_read_and_backfilled(): void
+    {
+        $this->createSixTeams(1);
+        $pool = UserRolePool::create([
+            'uid' => $this->user->id,
+            'nickname' => '回填账号',
+            'roles' => range(1, 18),
+            'status' => 1,
+        ]);
+
+        Sanctum::actingAs($this->user);
+        $this->postJson(self::CURRENT_URL, [
+            'accountId' => $pool->id,
+        ])->assertOk()->assertJsonCount(1, 'data');
+
+        $legacy = SystemSixHitResultCache::query()->firstOrFail();
+        $cacheKeyPrefix = (new \ReflectionClassConstant(
+            SystemSixHitService::class,
+            'RESULT_CACHE_KEY_PREFIX'
+        ))->getValue();
+
+        DB::table('system_six_hit_result_caches')
+            ->where('id', $legacy->id)
+            ->update(['results' => json_encode([], JSON_THROW_ON_ERROR)]);
+        Cache::forget($cacheKeyPrefix.$legacy->cache_key);
+
+        $this->postJson(self::CURRENT_URL, [
+            'accountId' => $pool->id,
+        ])->assertOk()->assertJsonCount(0, 'data');
+
+        DB::table('system_six_hit_result_caches')
+            ->where('id', $legacy->id)
+            ->delete();
+
+        $this->postJson(self::CURRENT_URL, [
+            'accountId' => $pool->id,
+        ])->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_locked_ids_limit_two_per_stage_and_hidden_ids_are_unlimited(): void
