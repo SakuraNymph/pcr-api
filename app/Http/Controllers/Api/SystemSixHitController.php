@@ -30,7 +30,7 @@ class SystemSixHitController extends Controller
             (int) $request->validated('accountId'),
             array_map('intval', $request->validated('lowBosses') ?? []),
             array_map('intval', $request->validated('highBosses') ?? []),
-            (int) ($request->validated('mode') ?? 1),
+            (int) ($request->validated('difficulty') ?? 0),
             (int) ($request->validated('stage') ?? 0),
             (int) ($request->validated('atkType') ?? 0),
             array_map('intval', $request->validated('lockedIds') ?? []),
@@ -46,7 +46,7 @@ class SystemSixHitController extends Controller
         $data = $this->systemSixHitService->getPreviousMonthGroups(
             array_map('intval', $request->validated('lowBosses') ?? []),
             array_map('intval', $request->validated('highBosses') ?? []),
-            (int) ($request->validated('mode') ?? 1),
+            (int) ($request->validated('difficulty') ?? 0),
             (int) ($request->validated('stage') ?? 0),
             (int) ($request->validated('atkType') ?? 0),
             array_map('intval', $request->validated('lockedIds') ?? []),

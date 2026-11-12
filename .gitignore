@@ -38,3 +38,15 @@ Thumbs.db
 /app/Http/Controllers/TestController.php
 /app/Http/Controllers/Api/TestController.php
 database/
+
+# 允许意见反馈功能新增的迁移与 Seeder 被 Git 跟踪
+!database/
+database/*
+!database/migrations/
+database/migrations/*
+!database/migrations/2026_11_12_000001_create_user_feedback_table.php
+!database/migrations/2026_11_12_000002_create_user_feedback_messages_table.php
+!database/migrations/2026_11_12_000003_create_user_feedback_images_table.php
+!database/seeders/
+database/seeders/*
+!database/seeders/FeedbackManagementSeeder.php

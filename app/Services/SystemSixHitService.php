@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 
 class SystemSixHitService
 {
-    private const ALGORITHM_VERSION = 5;
+    private const ALGORITHM_VERSION = 6;
 
     private const RESULT_LIMIT = 10;
 
@@ -63,7 +63,7 @@ class SystemSixHitService
         int $accountId,
         array $lowBosses = [],
         array $highBosses = [],
-        int $mode = 1,
+        int $difficulty = 0,
         int $stage = 0,
         int $atkType = 0,
         array $lockedIds = [],
@@ -82,7 +82,7 @@ class SystemSixHitService
             $start,
             $end,
             $yearMonth,
-            $mode,
+            $difficulty,
             $lowBosses,
             $highBosses,
             $stage,
@@ -107,7 +107,7 @@ class SystemSixHitService
     public function getPreviousMonthGroups(
         array $lowBosses = [],
         array $highBosses = [],
-        int $mode = 1,
+        int $difficulty = 0,
         int $stage = 0,
         int $atkType = 0,
         array $lockedIds = [],
@@ -119,7 +119,7 @@ class SystemSixHitService
             $start,
             $end,
             $yearMonth,
-            $mode,
+            $difficulty,
             $lowBosses,
             $highBosses,
             $stage,
@@ -142,7 +142,7 @@ class SystemSixHitService
         Carbon $start,
         Carbon $end,
         string $yearMonth,
-        int $mode,
+        int $difficulty,
         array $lowBosses,
         array $highBosses,
         int $stage,
@@ -155,7 +155,7 @@ class SystemSixHitService
         ?string $rolePoolHash = null,
         ?array $accountRoles = null
     ): array {
-        $teams = $this->queryTeams($mode, $start, $end);
+        $teams = $this->queryTeams($difficulty, $start, $end);
         $lowState = $this->systemTripleService->buildSnapshotState(
             $teams,
             [2, 3]
@@ -178,7 +178,7 @@ class SystemSixHitService
         );
         $cacheSet = $this->getOrCreateCacheSet(
             $yearMonth,
-            $mode,
+            $difficulty,
             $sourceSignature,
             $lowState,
             $highState
@@ -187,7 +187,7 @@ class SystemSixHitService
         $filters = $this->normalizeFilters(
             $lowBosses,
             $highBosses,
-            $mode,
+            $difficulty,
             $stage,
             $atkType,
             $lockedIds,
@@ -298,23 +298,14 @@ class SystemSixHitService
     }
 
     private function queryTeams(
-        int $highMode,
+        int $difficulty,
         Carbon $start,
         Carbon $end
     ): EloquentCollection {
-        return Team::query()
+        $teams = Team::query()
             ->where('uid', 0)
             ->where('status', 1)
-            ->where(function ($query) use ($highMode): void {
-                // 低阶段不限制自动/手动；模式筛选只作用于高阶段。
-                $query
-                    ->whereIn('stage', [2, 3])
-                    ->orWhere(function ($query) use ($highMode): void {
-                        $query
-                            ->where('stage', 4)
-                            ->where('mode', $highMode);
-                    });
-            })
+            ->whereIn('stage', [2, 3, 4])
             ->where('created_at', '>=', $start)
             ->where('created_at', '<', $end)
             ->with([
@@ -330,6 +321,16 @@ class SystemSixHitService
             ])
             ->orderBy('id')
             ->get();
+
+        return $teams
+            ->filter(
+                fn (Team $team): bool => (int) $team->stage !== 4
+                    || $this->systemTripleService->teamHasDifficulty(
+                        $team,
+                        $difficulty
+                    )
+            )
+            ->values();
     }
 
     /**
@@ -361,14 +362,14 @@ class SystemSixHitService
      */
     private function getOrCreateCacheSet(
         string $yearMonth,
-        int $mode,
+        int $difficulty,
         string $sourceSignature,
         array $lowState,
         array $highState
     ): SystemSixHitCacheSet {
         $existing = SystemSixHitCacheSet::query()
             ->where('year_month', $yearMonth)
-            ->where('mode', $mode)
+            ->where('mode', $difficulty)
             ->where('source_signature', $sourceSignature)
             ->first();
 
@@ -384,7 +385,7 @@ class SystemSixHitService
 
         DB::transaction(function () use (
             $yearMonth,
-            $mode,
+            $difficulty,
             $sourceSignature,
             $lowState,
             $highState,
@@ -394,7 +395,7 @@ class SystemSixHitService
         ): void {
             DB::table('system_six_hit_cache_sets')->insertOrIgnore([
                 'year_month' => $yearMonth,
-                'mode' => $mode,
+                'mode' => $difficulty,
                 'algorithm_version' => self::ALGORITHM_VERSION,
                 'source_signature' => $sourceSignature,
                 'low_team_count' => 0,
@@ -408,7 +409,7 @@ class SystemSixHitService
 
             $cacheSet = SystemSixHitCacheSet::query()
                 ->where('year_month', $yearMonth)
-                ->where('mode', $mode)
+                ->where('mode', $difficulty)
                 ->where('source_signature', $sourceSignature)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -449,7 +450,7 @@ class SystemSixHitService
 
         return SystemSixHitCacheSet::query()
             ->where('year_month', $yearMonth)
-            ->where('mode', $mode)
+            ->where('mode', $difficulty)
             ->where('source_signature', $sourceSignature)
             ->firstOrFail();
     }
@@ -1625,7 +1626,7 @@ class SystemSixHitService
     private function normalizeFilters(
         array $lowBosses,
         array $highBosses,
-        int $mode,
+        int $difficulty,
         int $stage,
         int $atkType,
         array $lockedIds,
@@ -1637,7 +1638,7 @@ class SystemSixHitService
         return [
             'lowBosses' => $lowBosses,
             'highBosses' => $highBosses,
-            'mode' => $mode,
+            'difficulty' => $difficulty,
             'stage' => $stage,
             'atkType' => $atkType,
             'lockedIds' => $this->normalizeTeamIds($lockedIds),
@@ -1681,7 +1682,7 @@ class SystemSixHitService
                 $highLockedIds[] = $teamId;
             } else {
                 throw ValidationException::withMessages([
-                    'lockedIds' => '锁定作业不存在或不属于当前月份及当前模式',
+                    'lockedIds' => '锁定作业不存在或不属于当前月份及当前难度',
                 ]);
             }
         }

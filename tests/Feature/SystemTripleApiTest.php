@@ -121,6 +121,18 @@ class SystemTripleApiTest extends TestCase
             ->assertJsonValidationErrors('accountId');
     }
 
+    public function test_difficulty_validation_rejects_out_of_range_values(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->postJson(self::URL, ['difficulty' => 6])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('difficulty');
+        $this->postJson(self::PREVIOUS_MONTH_URL, ['difficulty' => -1])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('difficulty');
+    }
+
     public function test_account_role_pool_marks_missing_role_as_borrowed(): void
     {
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
@@ -325,6 +337,54 @@ class SystemTripleApiTest extends TestCase
         ])->assertOk()->assertJsonCount(0, 'data');
     }
 
+    public function test_account_path_scopes_combinations_by_difficulty(): void
+    {
+        $autoTeams = [
+            $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
+            $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
+            $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]),
+        ];
+        $simpleTeams = [
+            $this->createTeam(1, 100, 1, [10 => 1, 11 => 1, 12 => 1]),
+            $this->createTeam(2, 100, 1, [13 => 1, 14 => 1, 15 => 1]),
+            $this->createTeam(3, 100, 1, [16 => 1, 17 => 1, 18 => 1]),
+        ];
+
+        foreach ($autoTeams as $team) {
+            $this->createLink($team, 1);
+        }
+
+        foreach ($simpleTeams as $team) {
+            $this->createLink($team, 2);
+        }
+
+        $poolId = $this->createRolePool(
+            $this->user->id,
+            range(1, 18)
+        );
+
+        Sanctum::actingAs($this->user);
+
+        $auto = $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
+        $simple = $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 2,
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
+
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $autoTeams),
+            array_column($auto, 'id')
+        );
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $simpleTeams),
+            array_column($simple, 'id')
+        );
+        $this->assertDatabaseCount('system_triple_account_caches', 2);
+    }
+
     public function test_previous_month_allows_guest_and_registered_users(): void
     {
         $this->createTeam(
@@ -445,27 +505,17 @@ class SystemTripleApiTest extends TestCase
             status: 0,
             createdAt: Carbon::parse('2026-09-06 12:00:00')
         );
-        $this->createTeam(
-            1,
-            100,
-            1,
-            [31 => 1, 32 => 1, 33 => 1],
-            mode: 2,
-            createdAt: Carbon::parse('2026-09-07 12:00:00')
-        );
-
         Sanctum::actingAs($this->user);
-        $currentResponse = $this->postJson(self::URL, ['type' => 1])
+        $currentResponse = $this->postJson(self::URL)
             ->assertOk()
             ->json('data');
-        $currentCache = $this->systemTripleCache(1);
+        $currentCache = $this->systemTripleCache(0);
         $currentCacheSignature = $currentCache->signature;
         $currentCacheCombinations = $currentCache->combinations;
 
         Sanctum::actingAs($this->guest);
         $previousResponse = $this->postJson(
-            self::PREVIOUS_MONTH_URL,
-            ['type' => 1]
+            self::PREVIOUS_MONTH_URL
         )->assertOk()->json('data');
 
         $this->assertSame(
@@ -485,7 +535,7 @@ class SystemTripleApiTest extends TestCase
             array_column($previousResponse[0], 'id')
         );
 
-        $previousCache = $this->systemTripleCache(1, '202609');
+        $previousCache = $this->systemTripleCache(0, '202609');
         $this->assertSame(3, $previousCache->team_count);
         $this->assertSame(
             $this->sortedTeamIds([
@@ -497,11 +547,11 @@ class SystemTripleApiTest extends TestCase
         );
         $this->assertSame(
             $currentCacheSignature,
-            $this->systemTripleCache(1)->signature
+            $this->systemTripleCache(0)->signature
         );
         $this->assertSame(
             $currentCacheCombinations,
-            $this->systemTripleCache(1)->combinations
+            $this->systemTripleCache(0)->combinations
         );
     }
 
@@ -567,7 +617,7 @@ class SystemTripleApiTest extends TestCase
         );
         $this->assertDatabaseHas('system_triple_caches', [
             'year_month' => '202512',
-            'mode' => 1,
+            'mode' => 0,
         ]);
     }
 
@@ -724,66 +774,87 @@ class SystemTripleApiTest extends TestCase
         );
     }
 
-    public function test_previous_month_cache_modes_are_isolated(): void
+    public function test_previous_month_difficulty_scopes_are_isolated_and_ignore_teams_mode(): void
     {
-        $this->createTeam(
-            1,
-            100,
-            1,
-            [1 => 1, 2 => 1, 3 => 1],
-            mode: 1,
-            createdAt: Carbon::parse('2026-09-01 12:00:00')
-        );
-        $this->createTeam(
-            2,
-            100,
-            1,
-            [4 => 1, 5 => 1, 6 => 1],
-            mode: 1,
-            createdAt: Carbon::parse('2026-09-02 12:00:00')
-        );
-        $this->createTeam(
-            3,
-            100,
-            1,
-            [7 => 1, 8 => 1, 9 => 1],
-            mode: 1,
-            createdAt: Carbon::parse('2026-09-03 12:00:00')
-        );
-        $this->createTeam(
-            1,
-            100,
-            1,
-            [10 => 1, 11 => 1, 12 => 1],
-            mode: 2,
-            createdAt: Carbon::parse('2026-09-04 12:00:00')
-        );
-        $this->createTeam(
-            2,
-            100,
-            1,
-            [13 => 1, 14 => 1, 15 => 1],
-            mode: 2,
-            createdAt: Carbon::parse('2026-09-05 12:00:00')
-        );
-        $this->createTeam(
-            3,
-            100,
-            1,
-            [16 => 1, 17 => 1, 18 => 1],
-            mode: 2,
-            createdAt: Carbon::parse('2026-09-06 12:00:00')
-        );
+        $autoTeams = [
+            $this->createTeam(
+                1,
+                100,
+                1,
+                [1 => 1, 2 => 1, 3 => 1],
+                mode: 1,
+                createdAt: Carbon::parse('2026-09-01 12:00:00')
+            ),
+            $this->createTeam(
+                2,
+                100,
+                1,
+                [4 => 1, 5 => 1, 6 => 1],
+                mode: 2,
+                createdAt: Carbon::parse('2026-09-02 12:00:00')
+            ),
+            $this->createTeam(
+                3,
+                100,
+                1,
+                [7 => 1, 8 => 1, 9 => 1],
+                mode: 1,
+                createdAt: Carbon::parse('2026-09-03 12:00:00')
+            ),
+        ];
+        $simpleTeams = [
+            $this->createTeam(
+                1,
+                100,
+                1,
+                [10 => 1, 11 => 1, 12 => 1],
+                mode: 2,
+                createdAt: Carbon::parse('2026-09-04 12:00:00')
+            ),
+            $this->createTeam(
+                2,
+                100,
+                1,
+                [13 => 1, 14 => 1, 15 => 1],
+                mode: 1,
+                createdAt: Carbon::parse('2026-09-05 12:00:00')
+            ),
+            $this->createTeam(
+                3,
+                100,
+                1,
+                [16 => 1, 17 => 1, 18 => 1],
+                mode: 2,
+                createdAt: Carbon::parse('2026-09-06 12:00:00')
+            ),
+        ];
+
+        foreach ($autoTeams as $team) {
+            $this->createLink($team, 1);
+        }
+
+        foreach ($simpleTeams as $team) {
+            $this->createLink($team, 2);
+        }
 
         Sanctum::actingAs($this->guest);
-        $this->postJson(
+        $auto = $this->postJson(
             self::PREVIOUS_MONTH_URL,
-            ['type' => 1]
-        )->assertOk()->assertJsonCount(1, 'data');
-        $this->postJson(
+            ['difficulty' => 1]
+        )->assertOk()->assertJsonCount(1, 'data')->json('data.0');
+        $simple = $this->postJson(
             self::PREVIOUS_MONTH_URL,
-            ['type' => 2]
-        )->assertOk()->assertJsonCount(1, 'data');
+            ['difficulty' => 2]
+        )->assertOk()->assertJsonCount(1, 'data')->json('data.0');
+
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $autoTeams),
+            array_column($auto, 'id')
+        );
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $simpleTeams),
+            array_column($simple, 'id')
+        );
 
         $this->assertDatabaseHas('system_triple_caches', [
             'year_month' => '202609',
@@ -826,7 +897,7 @@ class SystemTripleApiTest extends TestCase
         $this->postJson(self::PREVIOUS_MONTH_URL)
             ->assertOk()
             ->assertJsonCount(1, 'data');
-        $cacheBefore = $this->systemTripleCache(1, '202609');
+        $cacheBefore = $this->systemTripleCache(0, '202609');
         $updatedAtBefore = $cacheBefore->updated_at?->format('Y-m-d H:i:s');
         $signatureBefore = $cacheBefore->signature;
         $teamIdsBefore = $cacheBefore->team_ids;
@@ -835,7 +906,7 @@ class SystemTripleApiTest extends TestCase
         $this->postJson(self::PREVIOUS_MONTH_URL)
             ->assertOk()
             ->assertJsonCount(1, 'data');
-        $cacheHit = $this->systemTripleCache(1, '202609');
+        $cacheHit = $this->systemTripleCache(0, '202609');
 
         $this->assertSame($updatedAtBefore, $cacheHit->updated_at?->format('Y-m-d H:i:s'));
         $this->assertSame($signatureBefore, $cacheHit->signature);
@@ -849,7 +920,7 @@ class SystemTripleApiTest extends TestCase
         $this->postJson(self::PREVIOUS_MONTH_URL)
             ->assertOk()
             ->assertJsonCount(1, 'data');
-        $cacheAfterRoleChange = $this->systemTripleCache(1, '202609');
+        $cacheAfterRoleChange = $this->systemTripleCache(0, '202609');
 
         $this->assertSame($teamIdsBefore, $cacheAfterRoleChange->team_ids);
         $this->assertNotSame($signatureBefore, $cacheAfterRoleChange->signature);
@@ -867,7 +938,7 @@ class SystemTripleApiTest extends TestCase
         );
         Carbon::setTestNow(Carbon::now()->addSecond());
         $this->postJson(self::PREVIOUS_MONTH_URL)->assertOk();
-        $cacheAfterTeamChange = $this->systemTripleCache(1, '202609');
+        $cacheAfterTeamChange = $this->systemTripleCache(0, '202609');
 
         $this->assertSame(4, $cacheAfterTeamChange->team_count);
         $this->assertStringContainsString(
@@ -880,11 +951,23 @@ class SystemTripleApiTest extends TestCase
         );
     }
 
-    public function test_only_current_month_system_d_stage_teams_with_requested_mode_are_used(): void
+    public function test_only_current_month_system_d_stage_teams_with_requested_difficulty_are_used(): void
     {
         $teamBoss3 = $this->createTeam(3, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $teamBoss1 = $this->createTeam(1, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $teamBoss2 = $this->createTeam(2, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
+        $otherDifficulty = $this->createTeam(
+            4,
+            100,
+            1,
+            [25 => 1, 26 => 1, 27 => 1]
+        );
+
+        foreach ([$teamBoss1, $teamBoss2, $teamBoss3] as $team) {
+            $this->createLink($team, 1);
+        }
+
+        $this->createLink($otherDifficulty, 2);
 
         $this->createTeam(
             1,
@@ -900,7 +983,8 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $response = $this->postJson(self::URL, ['type' => 1])->assertOk();
+        $response = $this->postJson(self::URL, ['difficulty' => 1])
+            ->assertOk();
         $combinations = $response->json('data');
 
         $this->assertCount(1, $combinations);
@@ -908,6 +992,10 @@ class SystemTripleApiTest extends TestCase
             [$teamBoss1->id, $teamBoss2->id, $teamBoss3->id],
             array_column($combinations[0], 'id')
         );
+
+        $this->postJson(self::URL, ['difficulty' => 2])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_role_shared_by_all_three_teams_is_valid_and_assigns_two_borrows(): void
@@ -1128,7 +1216,7 @@ class SystemTripleApiTest extends TestCase
                 url('images/roles/3001.webp')
             );
 
-        $cacheBefore = $this->systemTripleCache(1);
+        $cacheBefore = $this->systemTripleCache(0);
         $this->assertSame(3, $cacheBefore->team_count);
         $this->assertSame(
             $this->sortedTeamIds([$first, $second, $third]),
@@ -1147,7 +1235,7 @@ class SystemTripleApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data.0.0.link');
 
-        $cacheAfterLinkChange = $this->systemTripleCache(1);
+        $cacheAfterLinkChange = $this->systemTripleCache(0);
         $this->assertSame(
             $signatureBefore,
             $cacheAfterLinkChange->signature
@@ -1175,7 +1263,7 @@ class SystemTripleApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data');
 
-        $cacheAfterRoleChange = $this->systemTripleCache(1);
+        $cacheAfterRoleChange = $this->systemTripleCache(0);
         $this->assertNotSame(
             $signatureBefore,
             $cacheAfterRoleChange->signature
@@ -1195,7 +1283,7 @@ class SystemTripleApiTest extends TestCase
         Sanctum::actingAs($this->user);
 
         $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
-        $cacheBefore = $this->systemTripleCache(1);
+        $cacheBefore = $this->systemTripleCache(0);
 
         $first->update(['status' => 0]);
         $replacement = $this->createTeam(
@@ -1207,7 +1295,7 @@ class SystemTripleApiTest extends TestCase
         Carbon::setTestNow(Carbon::now()->addSecond());
 
         $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
-        $cacheAfter = $this->systemTripleCache(1);
+        $cacheAfter = $this->systemTripleCache(0);
 
         $this->assertSame(3, $cacheAfter->team_count);
         $this->assertSame(
@@ -1226,20 +1314,34 @@ class SystemTripleApiTest extends TestCase
         );
     }
 
-    public function test_cache_is_scoped_by_month_and_mode(): void
+    public function test_cache_is_scoped_by_month_and_difficulty(): void
     {
-        $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
-        $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
-        $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
+        foreach ([1, 2, 3] as $index) {
+            $start = $index * 3;
+            $team = $this->createTeam(
+                1,
+                100,
+                1,
+                [$start + 1 => 1, $start + 2 => 1, $start + 3 => 1]
+            );
+            $this->createLink($team, 1);
+        }
 
-        $this->createTeam(1, 100, 1, [10 => 1, 11 => 1, 12 => 1], mode: 2);
-        $this->createTeam(2, 100, 1, [13 => 1, 14 => 1, 15 => 1], mode: 2);
-        $this->createTeam(3, 100, 1, [16 => 1, 17 => 1, 18 => 1], mode: 2);
+        foreach ([1, 2, 3] as $index) {
+            $start = 10 + $index * 3;
+            $team = $this->createTeam(
+                1,
+                100,
+                1,
+                [$start + 1 => 1, $start + 2 => 1, $start + 3 => 1]
+            );
+            $this->createLink($team, 2);
+        }
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL, ['type' => 1])->assertOk();
-        $this->postJson(self::URL, ['type' => 2])->assertOk();
+        $this->postJson(self::URL, ['difficulty' => 1])->assertOk();
+        $this->postJson(self::URL, ['difficulty' => 2])->assertOk();
 
         $this->assertDatabaseCount('system_triple_caches', 2);
         $this->assertDatabaseHas('system_triple_caches', [
@@ -1270,6 +1372,60 @@ class SystemTripleApiTest extends TestCase
         $this->assertDatabaseCount('system_triple_caches', 1);
     }
 
+    public function test_all_three_teams_must_contain_the_selected_difficulty(): void
+    {
+        $autoTeams = [
+            $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
+            $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
+            $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]),
+        ];
+        $onlySimple = $this->createTeam(
+            4,
+            100,
+            1,
+            [10 => 1, 11 => 1, 12 => 1]
+        );
+
+        foreach ($autoTeams as $team) {
+            $this->createLink($team, 1);
+        }
+
+        $this->createLink($onlySimple, 2);
+
+        Sanctum::actingAs($this->user);
+
+        $combination = $this->postJson(self::URL, ['difficulty' => 1])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $autoTeams),
+            array_column($combination, 'id')
+        );
+
+        $this->postJson(self::URL, ['difficulty' => 2])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
+    public function test_hidden_links_do_not_count_toward_difficulty(): void
+    {
+        $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
+        $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
+        $third = $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
+
+        $this->createLink($first, 1, 0);
+        $this->createLink($second, 1);
+        $this->createLink($third, 1);
+
+        Sanctum::actingAs($this->user);
+
+        $this->postJson(self::URL, ['difficulty' => 1])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_fewer_than_three_eligible_teams_returns_empty_data(): void
     {
         $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
@@ -1282,7 +1438,7 @@ class SystemTripleApiTest extends TestCase
             ->assertJsonPath('status', 0)
             ->assertJsonCount(0, 'data');
 
-        $cache = $this->systemTripleCache(1);
+        $cache = $this->systemTripleCache(0);
         $this->assertSame(2, $cache->team_count);
         $this->assertSame([], $cache->combinations);
     }
@@ -1361,6 +1517,22 @@ class SystemTripleApiTest extends TestCase
         }
 
         return $team;
+    }
+
+    private function createLink(
+        Team $team,
+        int $difficulty,
+        int $status = 1
+    ): TeamLink {
+        return TeamLink::create([
+            'team_id' => $team->id,
+            'url' => 'https://example.com/team-'.$team->id.'-'.$difficulty,
+            'author' => 'tester',
+            'difficulty' => $difficulty,
+            'damage' => 100,
+            'note' => null,
+            'status' => $status,
+        ]);
     }
 
     private function ensureGameRole(int $roleId): void

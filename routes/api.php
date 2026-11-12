@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminFeedbackController;
+use App\Http\Controllers\Api\AdminFeedbackImageController;
 use App\Http\Controllers\Api\AdminRoleController;
 use App\Http\Controllers\Api\BossController;
 use App\Http\Controllers\Api\DashboardController;
@@ -18,6 +20,8 @@ use App\Http\Controllers\Api\UserAuthController;
 use App\Http\Controllers\Api\UserCardStatisticsController;
 use App\Http\Controllers\Api\UserClanScheduleController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserFeedbackController;
+use App\Http\Controllers\Api\UserFeedbackImageController;
 use App\Http\Controllers\Api\UserGuideConfigController;
 use App\Http\Controllers\Api\UserGuildController;
 use App\Http\Controllers\Api\UserGuildApplicationController;
@@ -39,6 +43,12 @@ Route::prefix('admin')->group(function () {
 
     // 登录
     Route::post('login', [AdminController::class, 'login']);
+
+    // 意见反馈图片：使用短期签名 URL，不依赖 Authorization 头
+    Route::get('feedback/images/{image}', [AdminFeedbackImageController::class, 'show'])
+        ->whereNumber('image')
+        ->middleware('signed')
+        ->name('admin.feedback.image');
 
     // 只需要管理员登录，不需要 API 权限
     Route::middleware([
@@ -172,6 +182,44 @@ Route::prefix('admin')->group(function () {
         Route::get('system-logs', [SystemLogController::class, 'index']);
         Route::get('system-logs/{systemLog}', [SystemLogController::class, 'show']);
     });
+
+    // 需要管理员登录 + 超级管理员身份（不使用 permission 中间件）
+    Route::middleware([
+        'auth:sanctum',
+        'admin.identity',
+        'super.admin',
+    ])->group(function () {
+
+        // ==================== 意见反馈 ====================
+
+        Route::get('feedback', [AdminFeedbackController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('admin.feedback.index');
+
+        Route::get('feedback/statistics', [AdminFeedbackController::class, 'statistics'])
+            ->middleware('throttle:60,1')
+            ->name('admin.feedback.statistics');
+
+        Route::get('feedback/{id}', [AdminFeedbackController::class, 'show'])
+            ->whereNumber('id')
+            ->middleware('throttle:60,1')
+            ->name('admin.feedback.show');
+
+        Route::post('feedback/{id}/messages', [AdminFeedbackController::class, 'storeMessage'])
+            ->whereNumber('id')
+            ->middleware('throttle:20,1')
+            ->name('admin.feedback.messages.store');
+
+        Route::put('feedback/{id}/status', [AdminFeedbackController::class, 'updateStatus'])
+            ->whereNumber('id')
+            ->middleware('throttle:20,1')
+            ->name('admin.feedback.status.update');
+
+        Route::post('feedback/{id}/read', [AdminFeedbackController::class, 'markRead'])
+            ->whereNumber('id')
+            ->middleware('throttle:60,1')
+            ->name('admin.feedback.read');
+    });
 });
 
 
@@ -189,6 +237,12 @@ Route::prefix('user')->group(function () {
 
     // 用户登录
     Route::post('login', [UserAuthController::class, 'login']);
+
+    // 意见反馈图片：使用短期签名 URL，不依赖 Authorization 头
+    Route::get('feedback/images/{image}', [UserFeedbackImageController::class, 'show'])
+        ->whereNumber('image')
+        ->middleware('signed')
+        ->name('user.feedback.image');
 
 
     // ==================== 仅游客 ====================
@@ -570,6 +624,31 @@ Route::prefix('user')->group(function () {
 
         // 生成或获取本月系统六刀组合，仅正式注册用户可用
         Route::post('game/teams/six/system', [SystemSixHitController::class, 'current']);
+
+        // ==================== 意见反馈 ====================
+
+        Route::get('feedback', [UserFeedbackController::class, 'index'])
+            ->middleware('throttle:60,1')
+            ->name('user.feedback.index');
+
+        Route::post('feedback', [UserFeedbackController::class, 'store'])
+            ->middleware('throttle:20,1')
+            ->name('user.feedback.store');
+
+        Route::get('feedback/{id}', [UserFeedbackController::class, 'show'])
+            ->whereNumber('id')
+            ->middleware('throttle:60,1')
+            ->name('user.feedback.show');
+
+        Route::post('feedback/{id}/messages', [UserFeedbackController::class, 'storeMessage'])
+            ->whereNumber('id')
+            ->middleware('throttle:20,1')
+            ->name('user.feedback.messages.store');
+
+        Route::post('feedback/{id}/read', [UserFeedbackController::class, 'markRead'])
+            ->whereNumber('id')
+            ->middleware('throttle:60,1')
+            ->name('user.feedback.read');
     });
 });
 

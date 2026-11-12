@@ -119,7 +119,7 @@ class UserTripleApiTest extends TestCase
         );
     }
 
-    public function test_only_current_users_current_month_d_stage_visible_teams_in_requested_mode_are_used(): void
+    public function test_only_current_users_current_month_d_stage_visible_teams_in_requested_difficulty_are_used(): void
     {
         $first = $this->createTeam(
             1,
@@ -140,6 +140,24 @@ class UserTripleApiTest extends TestCase
             100,
             [7 => 1, 8 => 1, 9 => 1],
             $this->user->id
+        );
+        $otherDifficulty = $this->createTeam(
+            4,
+            100,
+            [31 => 1, 32 => 1, 33 => 1],
+            $this->user->id,
+            mode: 2
+        );
+
+        foreach ([$first, $second, $third] as $team) {
+            $this->createLink($team, 'https://example.com/auto-'.$team->id, 1, 1);
+        }
+
+        $this->createLink(
+            $otherDifficulty,
+            'https://example.com/simple-'.$otherDifficulty->id,
+            1,
+            2
         );
 
         $this->createTeam(
@@ -164,7 +182,7 @@ class UserTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $data = $this->postJson(self::URL, ['type' => 1])
+        $data = $this->postJson(self::URL, ['difficulty' => 1])
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->json('data.0');
@@ -173,27 +191,39 @@ class UserTripleApiTest extends TestCase
             [$first->id, $second->id, $third->id],
             array_column($data, 'id')
         );
+
+        $this->postJson(self::URL, ['difficulty' => 2])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
-    public function test_auto_and_manual_modes_are_not_mixed(): void
+    public function test_difficulty_scopes_ignore_teams_mode(): void
     {
         $automatic = [
-            $this->createTeam(1, 100, [1 => 1, 2 => 1, 3 => 1], $this->user->id),
-            $this->createTeam(2, 100, [4 => 1, 5 => 1, 6 => 1], $this->user->id),
-            $this->createTeam(3, 100, [7 => 1, 8 => 1, 9 => 1], $this->user->id),
+            $this->createTeam(1, 100, [1 => 1, 2 => 1, 3 => 1], $this->user->id, mode: 1),
+            $this->createTeam(2, 100, [4 => 1, 5 => 1, 6 => 1], $this->user->id, mode: 2),
+            $this->createTeam(3, 100, [7 => 1, 8 => 1, 9 => 1], $this->user->id, mode: 1),
         ];
         $manual = [
             $this->createTeam(1, 100, [10 => 1, 11 => 1, 12 => 1], $this->user->id, mode: 2),
-            $this->createTeam(2, 100, [13 => 1, 14 => 1, 15 => 1], $this->user->id, mode: 2),
+            $this->createTeam(2, 100, [13 => 1, 14 => 1, 15 => 1], $this->user->id, mode: 1),
             $this->createTeam(3, 100, [16 => 1, 17 => 1, 18 => 1], $this->user->id, mode: 2),
         ];
 
+        foreach ($automatic as $team) {
+            $this->createLink($team, 'https://example.com/auto-'.$team->id, 1, 1);
+        }
+
+        foreach ($manual as $team) {
+            $this->createLink($team, 'https://example.com/manual-'.$team->id, 1, 2);
+        }
+
         Sanctum::actingAs($this->user);
 
-        $automaticResponse = $this->postJson(self::URL, ['type' => 1])
+        $automaticResponse = $this->postJson(self::URL, ['difficulty' => 1])
             ->assertOk()
             ->json('data.0');
-        $manualResponse = $this->postJson(self::URL, ['type' => 2])
+        $manualResponse = $this->postJson(self::URL, ['difficulty' => 2])
             ->assertOk()
             ->json('data.0');
 
@@ -452,6 +482,68 @@ class UserTripleApiTest extends TestCase
         $this->assertSame([], $copiedResponse['link']);
     }
 
+    public function test_copied_team_uses_source_links_for_difficulty_filtering(): void
+    {
+        $source = $this->createTeam(
+            1,
+            100,
+            [1 => 1, 2 => 1, 3 => 1],
+            0,
+            status: 0,
+            createdAt: Carbon::parse('2026-09-01 12:00:00')
+        );
+        $copied = $this->createTeam(
+            1,
+            100,
+            [4 => 1, 5 => 1, 6 => 1],
+            $this->user->id,
+            sourceTeamId: $source->id
+        );
+        $second = $this->createTeam(
+            2,
+            100,
+            [7 => 1, 8 => 1, 9 => 1],
+            $this->user->id
+        );
+        $third = $this->createTeam(
+            3,
+            100,
+            [10 => 1, 11 => 1, 12 => 1],
+            $this->user->id
+        );
+
+        $this->createLink(
+            $source,
+            'https://example.com/source-auto',
+            0,
+            1
+        );
+        $this->createLink(
+            $copied,
+            'https://example.com/copied-own-simple',
+            1,
+            2
+        );
+        $this->createLink($second, 'https://example.com/second-auto', 1, 1);
+        $this->createLink($third, 'https://example.com/third-auto', 1, 1);
+
+        Sanctum::actingAs($this->user);
+
+        $combination = $this->postJson(self::URL, ['difficulty' => 1])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+
+        $this->assertSame(
+            [$copied->id, $second->id, $third->id],
+            array_column($combination, 'id')
+        );
+
+        $this->postJson(self::URL, ['difficulty' => 2])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     public function test_stale_system_triple_cache_is_not_read_or_written(): void
     {
         $first = $this->createTeam(1, 100, [1 => 1, 2 => 1, 3 => 1], $this->user->id);
@@ -460,7 +552,7 @@ class UserTripleApiTest extends TestCase
 
         DB::table('system_triple_caches')->insert([
             'year_month' => '202610',
-            'mode' => 1,
+            'mode' => 0,
             'team_ids' => '999999,999998,999997',
             'team_count' => 3,
             'signature' => str_repeat('a', 64),
@@ -485,7 +577,7 @@ class UserTripleApiTest extends TestCase
         $this->assertDatabaseCount('system_triple_caches', 1);
         $this->assertDatabaseHas('system_triple_caches', [
             'year_month' => '202610',
-            'mode' => 1,
+            'mode' => 0,
             'team_count' => 3,
         ]);
     }
@@ -500,7 +592,7 @@ class UserTripleApiTest extends TestCase
 
         DB::enableQueryLog();
         DB::flushQueryLog();
-        $service->getUserGroups($this->user->id, 1);
+        $service->getUserGroups($this->user->id, 0);
         $threeTeamQueryCount = count(DB::getQueryLog());
         DB::disableQueryLog();
 
@@ -510,7 +602,7 @@ class UserTripleApiTest extends TestCase
 
         DB::enableQueryLog();
         DB::flushQueryLog();
-        $service->getUserGroups($this->user->id, 1);
+        $service->getUserGroups($this->user->id, 0);
         $sixTeamQueryCount = count(DB::getQueryLog());
         DB::disableQueryLog();
 

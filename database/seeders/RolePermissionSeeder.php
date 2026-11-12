@@ -19,6 +19,12 @@ class RolePermissionSeeder extends Seeder
                 ->pluck('id')
                 ->toArray();
 
+            // 意见反馈权限仅授予超级管理员
+            $feedbackPermissionIds = Permission::query()
+                ->where('name', 'like', 'system:feedback:%')
+                ->pluck('id')
+                ->toArray();
+
             $roleCodes = [
                 'super_admin',
                 'data_admin',
@@ -30,7 +36,11 @@ class RolePermissionSeeder extends Seeder
                 ->get();
 
             foreach ($roles as $role) {
-                $role->permissions()->sync($permissionIds);
+                $ids = $role->code === 'super_admin'
+                    ? $permissionIds
+                    : array_values(array_diff($permissionIds, $feedbackPermissionIds));
+
+                $role->permissions()->sync($ids);
             }
         });
     }

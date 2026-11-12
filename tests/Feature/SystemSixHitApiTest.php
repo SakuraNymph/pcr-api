@@ -182,7 +182,28 @@ class SystemSixHitApiTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
-    public function test_previous_month_mode_filters_only_high_stage(): void
+    public function test_difficulty_validation_rejects_out_of_range_values(): void
+    {
+        $pool = UserRolePool::create([
+            'uid' => $this->user->id,
+            'nickname' => '难度校验账号',
+            'roles' => range(1, 18),
+            'status' => 1,
+        ]);
+
+        Sanctum::actingAs($this->user);
+        $this->postJson(self::CURRENT_URL, [
+            'accountId' => $pool->id,
+            'difficulty' => 6,
+        ])->assertStatus(422)->assertJsonValidationErrors('difficulty');
+
+        Sanctum::actingAs($this->guest);
+        $this->postJson(self::PREVIOUS_URL, [
+            'difficulty' => -1,
+        ])->assertStatus(422)->assertJsonValidationErrors('difficulty');
+    }
+
+    public function test_previous_month_difficulty_filters_only_high_stage_and_ignores_mode(): void
     {
         $createdAt = Carbon::parse('2026-10-10 12:00:00');
 
@@ -202,25 +223,31 @@ class SystemSixHitApiTest extends TestCase
             );
         }
 
+        $highTeams = [];
+
         foreach ([
             [10 => 1, 11 => 1, 12 => 1],
             [13 => 1, 14 => 1, 15 => 1],
             [16 => 1, 17 => 1, 18 => 1],
         ] as $roles) {
-            $this->createTeam(
+            $highTeams[] = $this->createTeam(
                 1,
                 10,
                 1,
                 $roles,
-                mode: 2,
+                mode: 1,
                 stage: 4,
                 createdAt: $createdAt
             );
         }
 
+        foreach ($highTeams as $team) {
+            $this->createLink($team, 2);
+        }
+
         Sanctum::actingAs($this->guest);
         $package = $this->postJson(self::PREVIOUS_URL, [
-            'mode' => 2,
+            'difficulty' => 2,
         ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
 
         $this->assertSame(
@@ -233,8 +260,115 @@ class SystemSixHitApiTest extends TestCase
         );
 
         $this->postJson(self::PREVIOUS_URL, [
-            'mode' => 1,
+            'difficulty' => 1,
         ])->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_difficulty_filters_high_stage_only_and_ignores_teams_mode(): void
+    {
+        $createdAt = Carbon::parse('2026-10-10 12:00:00');
+        $lowTeams = [];
+
+        foreach ([
+            [1 => 1, 2 => 1, 3 => 1],
+            [4 => 1, 5 => 1, 6 => 1],
+            [7 => 1, 8 => 1, 9 => 1],
+        ] as $index => $roles) {
+            $lowTeams[] = $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                mode: $index % 2 + 1,
+                stage: $index === 2 ? 3 : 2,
+                createdAt: $createdAt
+            );
+        }
+
+        foreach ($lowTeams as $team) {
+            $this->createLink($team, 5);
+        }
+
+        $highTeams = [];
+
+        foreach ([
+            [10 => 1, 11 => 1, 12 => 1],
+            [13 => 1, 14 => 1, 15 => 1],
+            [16 => 1, 17 => 1, 18 => 1],
+        ] as $index => $roles) {
+            $highTeams[] = $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                mode: $index % 2 + 1,
+                stage: 4,
+                createdAt: $createdAt
+            );
+        }
+
+        foreach ($highTeams as $team) {
+            $this->createLink($team, 1);
+        }
+
+        Sanctum::actingAs($this->guest);
+        $package = $this->postJson(self::PREVIOUS_URL, [
+            'difficulty' => 1,
+        ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
+
+        $this->assertSame(
+            [2, 2, 3],
+            array_column(array_column($package['pairs'], 'low'), 'stage')
+        );
+        $this->assertSame(
+            [4, 4, 4],
+            array_column(array_column($package['pairs'], 'high'), 'stage')
+        );
+    }
+
+    public function test_difficulty_requires_all_three_high_stage_teams(): void
+    {
+        $createdAt = Carbon::parse('2026-10-10 12:00:00');
+
+        foreach ([
+            [1 => 1, 2 => 1, 3 => 1],
+            [4 => 1, 5 => 1, 6 => 1],
+            [7 => 1, 8 => 1, 9 => 1],
+        ] as $index => $roles) {
+            $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: $index === 2 ? 3 : 2,
+                createdAt: $createdAt
+            );
+        }
+
+        foreach ([
+            [10 => 1, 11 => 1, 12 => 1],
+            [13 => 1, 14 => 1, 15 => 1],
+            [16 => 1, 17 => 1, 18 => 1],
+        ] as $index => $roles) {
+            $team = $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: 4,
+                createdAt: $createdAt
+            );
+            $this->createLink($team, $index < 2 ? 1 : 2);
+        }
+
+        Sanctum::actingAs($this->guest);
+
+        $this->postJson(self::PREVIOUS_URL, ['difficulty' => 1])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+        $this->postJson(self::PREVIOUS_URL, ['difficulty' => 2])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_expands_candidate_limit_when_five_per_side_is_not_enough(): void
@@ -762,7 +896,7 @@ class SystemSixHitApiTest extends TestCase
         }
     }
 
-    public function test_mode_stage_attack_and_repeated_boss_filters(): void
+    public function test_difficulty_stage_attack_and_repeated_boss_filters(): void
     {
         $lowRoles = [
             [1 => 1, 2 => 1, 3 => 1],
@@ -788,8 +922,10 @@ class SystemSixHitApiTest extends TestCase
             );
         }
 
+        $highTeams = [];
+
         foreach ($highRoles as $index => $roles) {
-            $this->createTeam(
+            $highTeams[] = $this->createTeam(
                 2,
                 10,
                 $index < 2 ? 1 : -1,
@@ -800,11 +936,15 @@ class SystemSixHitApiTest extends TestCase
             );
         }
 
+        foreach ($highTeams as $team) {
+            $this->createLink($team, 2);
+        }
+
         Sanctum::actingAs($this->guest);
         $baseFilters = [
             'lowBosses' => [1, 1],
             'highBosses' => [2, 2, 2],
-            'mode' => 2,
+            'difficulty' => 2,
             'atkType' => 2,
         ];
 
@@ -829,11 +969,11 @@ class SystemSixHitApiTest extends TestCase
         ])->assertOk()->assertJsonCount(0, 'data');
         $this->postJson(self::PREVIOUS_URL, [
             ...$baseFilters,
-            'mode' => 1,
+            'difficulty' => 1,
         ])->assertOk()->assertJsonCount(0, 'data');
     }
 
-    public function test_current_month_mode_filters_only_high_stage(): void
+    public function test_current_month_difficulty_filters_only_high_stage(): void
     {
         $createdAt = Carbon::parse('2026-11-10 12:00:00');
 
@@ -853,20 +993,26 @@ class SystemSixHitApiTest extends TestCase
             );
         }
 
+        $highTeams = [];
+
         foreach ([
             [10 => 1, 11 => 1, 12 => 1],
             [13 => 1, 14 => 1, 15 => 1],
             [16 => 1, 17 => 1, 18 => 1],
         ] as $roles) {
-            $this->createTeam(
+            $highTeams[] = $this->createTeam(
                 1,
                 10,
                 1,
                 $roles,
-                mode: 2,
+                mode: 1,
                 stage: 4,
                 createdAt: $createdAt
             );
+        }
+
+        foreach ($highTeams as $team) {
+            $this->createLink($team, 2);
         }
 
         $pool = UserRolePool::create([
@@ -879,7 +1025,7 @@ class SystemSixHitApiTest extends TestCase
         Sanctum::actingAs($this->user);
         $package = $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
-            'mode' => 2,
+            'difficulty' => 2,
         ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
 
         $this->assertSame(
@@ -893,7 +1039,7 @@ class SystemSixHitApiTest extends TestCase
 
         $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
-            'mode' => 1,
+            'difficulty' => 1,
         ])->assertOk()->assertJsonCount(0, 'data');
     }
 
@@ -1281,6 +1427,22 @@ class SystemSixHitApiTest extends TestCase
         }
 
         return $team;
+    }
+
+    private function createLink(
+        Team $team,
+        int $difficulty,
+        int $status = 1
+    ): TeamLink {
+        return TeamLink::create([
+            'team_id' => $team->id,
+            'url' => 'https://example.com/six-'.$team->id.'-'.$difficulty,
+            'author' => 'tester',
+            'difficulty' => $difficulty,
+            'damage' => 100,
+            'note' => null,
+            'status' => $status,
+        ]);
     }
 
     private function ensureGameRole(int $roleId): void

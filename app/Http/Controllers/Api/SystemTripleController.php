@@ -41,7 +41,7 @@ class SystemTripleController extends Controller
         string $message
     ): JsonResponse {
         [
-            $mode,
+            $difficulty,
             $bossMap,
             $atkType,
             $lockedIds,
@@ -51,7 +51,7 @@ class SystemTripleController extends Controller
 
         $data = $accountId === null
             ? $this->systemTripleService->getGroups(
-                $mode,
+                $difficulty,
                 $bossMap,
                 $atkType,
                 $lockedIds,
@@ -61,7 +61,7 @@ class SystemTripleController extends Controller
             : $this->systemTripleService->getAccountGroups(
                 (int) $request->user()->id,
                 $accountId,
-                $mode,
+                $difficulty,
                 $bossMap,
                 $atkType,
                 $lockedIds,
@@ -90,7 +90,7 @@ class SystemTripleController extends Controller
             'row1' => ['nullable', 'integer'],
             'row2' => ['nullable', 'integer'],
             'row3' => ['nullable', 'integer'],
-            'type' => ['nullable', 'integer', 'in:1,2'],
+            'difficulty' => ['nullable', 'integer', 'between:0,5'],
             'atk' => ['nullable', 'integer', 'between:0,4'],
             'lockedIds' => ['nullable', 'array'],
             'lockedIds.*' => ['integer'],
@@ -135,7 +135,7 @@ class SystemTripleController extends Controller
         );
 
         return [
-            (int) ($validated['type'] ?? 1),
+            (int) ($validated['difficulty'] ?? 0),
             $bossMap,
             (int) ($validated['atk'] ?? 0),
             $lockedIds,

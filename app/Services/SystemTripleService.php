@@ -21,7 +21,9 @@ class SystemTripleService
 
     private const RESULT_LIMIT = 10;
 
-    private const ACCOUNT_ALGORITHM_VERSION = 1;
+    private const CACHE_VERSION = 2;
+
+    private const ACCOUNT_ALGORITHM_VERSION = 2;
 
     private const MULTIPLIER_RATES = [0, 4.5, 4.5, 4.7, 4.8, 5];
 
@@ -32,14 +34,14 @@ class SystemTripleService
      * @return array<int, array<int, array<string, mixed>>>
      */
     public function getGroups(
-        int $mode,
+        int $difficulty,
         array $bossMap = [],
         int $atkType = 0,
         array $lockedIds = [],
         array $hiddenIds = [],
         bool $previousMonth = false
     ): array {
-        $context = $this->loadCombinationCache($mode, $previousMonth);
+        $context = $this->loadCombinationCache($difficulty, $previousMonth);
         $snapshots = $context['snapshots'];
         $combinations = $context['combinations'];
 
@@ -69,7 +71,7 @@ class SystemTripleService
     public function getAccountGroups(
         int $uid,
         int $accountId,
-        int $mode,
+        int $difficulty,
         array $bossMap = [],
         int $atkType = 0,
         array $lockedIds = [],
@@ -87,7 +89,7 @@ class SystemTripleService
             ]);
         }
 
-        $context = $this->loadCombinationCache($mode, false);
+        $context = $this->loadCombinationCache($difficulty, false);
         $snapshots = $context['snapshots'];
         $combinations = $context['combinations'];
         $roleIds = $this->normalizeRoleIds($pool->roles ?? []);
@@ -95,7 +97,7 @@ class SystemTripleService
         $normalizedLockedIds = $this->normalizeTeamIds($lockedIds);
         $normalizedHiddenIds = $this->normalizeTeamIds($hiddenIds);
         $filters = [
-            'mode' => $mode,
+            'difficulty' => $difficulty,
             'boss_map' => array_map(
                 static fn (mixed $boss): int => (int) $boss,
                 $bossMap
@@ -108,7 +110,7 @@ class SystemTripleService
         $rolePoolHash = $this->hashArray($roleIds);
         $cacheAttributes = [
             'year_month' => $context['year_month'],
-            'mode' => $mode,
+            'mode' => $difficulty,
             'algorithm_version' => self::ACCOUNT_ALGORITHM_VERSION,
             'source_signature' => $context['signature'],
             'uid' => $uid,
@@ -226,7 +228,7 @@ class SystemTripleService
     }
 
     /**
-     * 获取当前用户本月指定模式的三刀组合，实时计算且不使用缓存。
+     * 获取当前用户本月指定难度的三刀组合，实时计算且不使用缓存。
      *
      * @param  array<int, int>  $bossMap
      * @param  array<int, int>  $lockedIds
@@ -235,7 +237,7 @@ class SystemTripleService
      */
     public function getUserGroups(
         int $uid,
-        int $mode,
+        int $difficulty,
         array $bossMap = [],
         int $atkType = 0,
         array $lockedIds = [],
@@ -249,7 +251,6 @@ class SystemTripleService
 
         $teams = $this->queryUserTeams(
             $uid,
-            $mode,
             $startOfMonth,
             $startOfNextMonth
         );
@@ -269,6 +270,16 @@ class SystemTripleService
                 ];
             })
             ->all();
+
+        if ($difficulty > 0) {
+            $snapshots = array_filter(
+                $snapshots,
+                fn (array $snapshot): bool => $this->snapshotHasDifficulty(
+                    $snapshot,
+                    $difficulty
+                )
+            );
+        }
 
         $combinations = $this->makeCombinations(
             array_values($snapshots),
@@ -302,7 +313,7 @@ class SystemTripleService
      * }
      */
     private function loadCombinationCache(
-        int $mode,
+        int $difficulty,
         bool $previousMonth
     ): array {
         $currentMonthStart = now()->startOfMonth();
@@ -318,11 +329,15 @@ class SystemTripleService
             ->startOfMonth();
         $yearMonth = $startOfMonth->format('Ym');
 
-        $teams = $this->queryTeams($mode, $startOfMonth, $startOfNextMonth);
+        $teams = $this->queryTeams(
+            $difficulty,
+            $startOfMonth,
+            $startOfNextMonth
+        );
         $state = $this->makeCacheState($teams);
         $cache = SystemTripleCache::query()
             ->where('year_month', $yearMonth)
-            ->where('mode', $mode)
+            ->where('mode', $difficulty)
             ->first();
 
         if ($cache !== null && $this->cacheMatches($cache, $state)) {
@@ -336,14 +351,14 @@ class SystemTripleService
 
         [$snapshots, $combinations, $signature] = DB::transaction(
             function () use (
-                $mode,
+                $difficulty,
                 $yearMonth,
                 $startOfMonth,
                 $startOfNextMonth
             ): array {
-                $cache = $this->lockCache($yearMonth, $mode);
+                $cache = $this->lockCache($yearMonth, $difficulty);
                 $teams = $this->queryTeams(
-                    $mode,
+                    $difficulty,
                     $startOfMonth,
                     $startOfNextMonth
                 );
@@ -744,15 +759,47 @@ class SystemTripleService
     }
 
     private function queryTeams(
-        int $mode,
+        int $difficulty,
+        Carbon $startOfMonth,
+        Carbon $startOfNextMonth
+    ): Collection {
+        $teams = Team::query()
+            ->where('uid', 0)
+            ->where('stage', self::STAGE)
+            ->where('status', 1)
+            ->where('created_at', '>=', $startOfMonth)
+            ->where('created_at', '<', $startOfNextMonth)
+            ->with([
+                'teamRoles' => function ($query): void {
+                    $query
+                        ->orderBy('id')
+                        ->with('role');
+                },
+                'links' => function ($query): void {
+                    $query
+                        ->where('status', 1)
+                        ->orderByDesc('damage')
+                        ->orderBy('id');
+                },
+            ])
+            ->orderBy('id')
+            ->get();
+
+        return $this->filterTeamsByDifficulty($teams, $difficulty);
+    }
+
+    /**
+     * 查询当前用户本月有效 D 阶段作业。
+     */
+    private function queryUserTeams(
+        int $uid,
         Carbon $startOfMonth,
         Carbon $startOfNextMonth
     ): Collection {
         return Team::query()
-            ->where('uid', 0)
+            ->where('uid', $uid)
             ->where('stage', self::STAGE)
             ->where('status', 1)
-            ->where('mode', $mode)
             ->where('created_at', '>=', $startOfMonth)
             ->where('created_at', '<', $startOfNextMonth)
             ->with([
@@ -773,36 +820,65 @@ class SystemTripleService
     }
 
     /**
-     * 查询当前用户指定模式的本月有效 D 阶段作业。
+     * 按作业可见链接中的难度筛选作业。
      */
-    private function queryUserTeams(
-        int $uid,
-        int $mode,
-        Carbon $startOfMonth,
-        Carbon $startOfNextMonth
+    public function filterTeamsByDifficulty(
+        Collection $teams,
+        int $difficulty
     ): Collection {
-        return Team::query()
-            ->where('uid', $uid)
-            ->where('stage', self::STAGE)
-            ->where('status', 1)
-            ->where('mode', $mode)
-            ->where('created_at', '>=', $startOfMonth)
-            ->where('created_at', '<', $startOfNextMonth)
-            ->with([
-                'teamRoles' => function ($query): void {
-                    $query
-                        ->orderBy('id')
-                        ->with('role');
-                },
-                'links' => function ($query): void {
-                    $query
-                        ->where('status', 1)
-                        ->orderByDesc('damage')
-                        ->orderBy('id');
-                },
-            ])
-            ->orderBy('id')
-            ->get();
+        if ($difficulty <= 0) {
+            return $teams;
+        }
+
+        return $teams
+            ->filter(
+                fn (Team $team): bool => $this->teamHasDifficulty(
+                    $team,
+                    $difficulty
+                )
+            )
+            ->values();
+    }
+
+    /**
+     * 判断作业是否包含指定难度的可见链接。
+     */
+    public function teamHasDifficulty(Team $team, int $difficulty): bool
+    {
+        return $difficulty <= 0
+            || $this->linksContainDifficulty($team->links, $difficulty);
+    }
+
+    /**
+     * @param  iterable<int, TeamLink>  $links
+     */
+    private function linksContainDifficulty(
+        iterable $links,
+        int $difficulty
+    ): bool {
+        foreach ($links as $link) {
+            if ((int) $link->difficulty === $difficulty) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $snapshot
+     */
+    private function snapshotHasDifficulty(
+        array $snapshot,
+        int $difficulty
+    ): bool {
+        foreach ($snapshot['links'] as $link) {
+            if ((int) ($link['difficulty'] ?? 0) === $difficulty) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -949,7 +1025,10 @@ class SystemTripleService
             ];
         }
 
-        return hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+        return hash('sha256', json_encode([
+            'algorithm_version' => self::CACHE_VERSION,
+            'teams' => $data,
+        ], JSON_THROW_ON_ERROR));
     }
 
     /**
@@ -995,13 +1074,16 @@ class SystemTripleService
             && is_array($cache->combinations);
     }
 
-    private function lockCache(string $yearMonth, int $mode): SystemTripleCache
+    private function lockCache(
+        string $yearMonth,
+        int $difficulty
+    ): SystemTripleCache
     {
         $now = now();
 
         DB::table('system_triple_caches')->insertOrIgnore([
             'year_month' => $yearMonth,
-            'mode' => $mode,
+            'mode' => $difficulty,
             'team_ids' => '',
             'team_count' => 0,
             'signature' => '',
@@ -1012,7 +1094,7 @@ class SystemTripleService
 
         return SystemTripleCache::query()
             ->where('year_month', $yearMonth)
-            ->where('mode', $mode)
+            ->where('mode', $difficulty)
             ->lockForUpdate()
             ->firstOrFail();
     }
