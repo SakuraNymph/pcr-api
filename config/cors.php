@@ -29,6 +29,10 @@ return [
         'http://localhost:8080',      // HBuilder 最常用端口
         'http://127.0.0.1:8080',
         'http://localhost:8081',
+        'http://127.0.0.1:8081',      // HBuilderX 以 127.0.0.1 打开时使用
+        'https://admin.saololi.site',
+        'https://pcr.saololi.site',
+        'https://test.saololi.site',
     ],
 
     // ④ 允许的请求头（前端可自行添加的自定义 Header）
