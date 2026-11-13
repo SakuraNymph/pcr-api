@@ -86,8 +86,10 @@ class TeamApiTest extends TestCase
 
         $list = $this->getJson('/api/admin/game/teams?status=1&page=1&pageSize=2');
         $list->assertOk()
-            ->assertJsonCount(7, 'data')
-            ->assertJsonPath('data.0.roles.0.nickname', '魔法角色');
+            ->assertJsonCount(2, 'data.data')
+            ->assertJsonPath('data.total', 7)
+            ->assertJsonPath('data.per_page', 2)
+            ->assertJsonPath('data.data.0.roles.0.nickname', '魔法角色');
 
         GameRoleStatistics::updateOrCreate(['game_role_id' => 101], ['use_times' => 5]);
         GameRoleStatistics::updateOrCreate(['game_role_id' => 102], ['use_times' => 50]);
@@ -140,21 +142,83 @@ class TeamApiTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_list_includes_zero_atk_in_physical_and_magic_and_sorts_default_without_pagination(): void
+    public function test_list_includes_zero_atk_in_physical_and_magic_and_sorts_default_list(): void
     {
         $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 2, bosses: [2], damage: 5000, roles: [103, 104]))->assertOk();
         $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 4, bosses: [1], damage: 5000, roles: [101, 102]))->assertOk();
         $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 4, bosses: [2], damage: 5000, roles: [101, 102]))->assertOk();
 
-        $this->getJson('/api/admin/game/teams?status=1&atk_type=1&pageSize=1')
+        $this->getJson('/api/admin/game/teams?status=1&atk_type=1')
             ->assertOk()
-            ->assertJsonCount(3, 'data')
-            ->assertJsonPath('data.0.stage', 4)
-            ->assertJsonPath('data.0.boss', 1)
-            ->assertJsonPath('data.1.boss', 2);
+            ->assertJsonCount(3, 'data.data')
+            ->assertJsonPath('data.data.0.stage', 4)
+            ->assertJsonPath('data.data.0.boss', 1)
+            ->assertJsonPath('data.data.1.boss', 2);
         $this->getJson('/api/admin/game/teams?status=1&atk_type=-1')
             ->assertOk()
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(3, 'data.data');
+    }
+
+    public function test_list_defaults_to_current_month_when_month_is_omitted(): void
+    {
+        try {
+            Carbon::setTestNow(Carbon::parse('2026-10-15 12:00:00'));
+            $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 4, bosses: [1], damage: 5000))
+                ->assertOk();
+
+            Carbon::setTestNow(Carbon::parse('2026-11-15 12:00:00'));
+            $this->postJson('/api/admin/game/teams', $this->batchPayload(stage: 4, bosses: [2], damage: 6000))
+                ->assertOk();
+
+            $this->getJson('/api/admin/game/teams?status=1')
+                ->assertOk()
+                ->assertJsonCount(1, 'data.data')
+                ->assertJsonPath('data.total', 1)
+                ->assertJsonPath('data.data.0.boss', 2);
+
+            $this->getJson('/api/admin/game/teams?status=1&month=2026-10')
+                ->assertOk()
+                ->assertJsonCount(1, 'data.data')
+                ->assertJsonPath('data.data.0.boss', 1);
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_list_defaults_to_twenty_rows_per_page(): void
+    {
+        $team = Team::query()->create([
+            'stage' => 4,
+            'uid' => 0,
+            'boss' => 1,
+            'damage' => 5000,
+            'team_key' => '101,102',
+            'status' => 1,
+            'mode' => 1,
+            'atk_value' => 0,
+        ]);
+
+        foreach (range(1, 21) as $index) {
+            $team->links()->create([
+                'url' => "https://example.com/link-{$index}",
+                'author' => '分页作者',
+                'difficulty' => 1,
+                'damage' => 5000,
+                'status' => 1,
+            ]);
+        }
+
+        $this->getJson('/api/admin/game/teams?status=1')
+            ->assertOk()
+            ->assertJsonCount(20, 'data.data')
+            ->assertJsonPath('data.total', 21)
+            ->assertJsonPath('data.per_page', 20)
+            ->assertJsonPath('data.last_page', 2);
+
+        $this->getJson('/api/admin/game/teams?status=1&page=2')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.current_page', 2);
     }
 
     public function test_public_team_list_sorts_by_damage_desc_then_id_asc(): void
@@ -241,11 +305,11 @@ class TeamApiTest extends TestCase
 
         $this->getJson('/api/admin/game/teams?status=1&author=第二作者&difficulty=1')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.author', '第二作者')
-            ->assertJsonPath('data.0.damage', 6000)
-            ->assertJsonPath('data.0.team_damage', 6000)
-            ->assertJsonPath('data.0.boss', 1);
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.author', '第二作者')
+            ->assertJsonPath('data.data.0.damage', 6000)
+            ->assertJsonPath('data.data.0.team_damage', 6000)
+            ->assertJsonPath('data.data.0.boss', 1);
     }
 
     public function test_matching_signature_in_same_batch_reuses_team_and_uses_highest_damage(): void
@@ -308,12 +372,12 @@ class TeamApiTest extends TestCase
 
         $this->getJson('/api/admin/game/teams?mode=1')
             ->assertOk()
-            ->assertJsonCount(4, 'data')
-            ->assertJsonPath('data.0.mode', 1);
+            ->assertJsonCount(4, 'data.data')
+            ->assertJsonPath('data.data.0.mode', 1);
         $this->getJson('/api/admin/game/teams?mode=2')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.mode', 2);
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.mode', 2);
     }
 
     public function test_same_signature_from_previous_month_creates_a_new_team_and_lock(): void
@@ -365,7 +429,7 @@ class TeamApiTest extends TestCase
         $this->assertDatabaseHas('team_links', ['team_id' => $hiddenTeam->id, 'status' => 1, 'damage' => 6000]);
         $this->getJson('/api/admin/game/teams?status=1')
             ->assertOk()
-            ->assertJsonCount(1, 'data');
+            ->assertJsonCount(1, 'data.data');
     }
 
     public function test_link_edit_hide_restore_and_status_filter_are_scoped_to_one_link(): void
@@ -402,16 +466,16 @@ class TeamApiTest extends TestCase
             ->assertOk();
         $this->getJson('/api/admin/game/teams?status=0')
             ->assertOk()
-            ->assertJsonCount(1, 'data');
+            ->assertJsonCount(1, 'data.data');
         $this->getJson('/api/admin/game/teams?status=1')
             ->assertOk()
-            ->assertJsonCount(1, 'data');
+            ->assertJsonCount(1, 'data.data');
 
         $this->patchJson("/api/admin/game/teams/{$team->id}/links/{$link->id}/status", ['status' => 1])
             ->assertOk();
         $this->getJson('/api/admin/game/teams?status=1')
             ->assertOk()
-            ->assertJsonCount(2, 'data');
+            ->assertJsonCount(2, 'data.data');
     }
 
     public function test_invalid_game_role_is_rejected_without_creating_partial_rows(): void

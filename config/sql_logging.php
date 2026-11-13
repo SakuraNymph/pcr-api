@@ -1,5 +1,7 @@
 <?php
 
+$defaultEnabled = in_array(env('APP_ENV', 'production'), ['local', 'testing'], true);
+
 return [
 
     /*
@@ -12,7 +14,7 @@ return [
     |
     */
 
-    'enabled' => env('SQL_LOG_ENABLED', true),
+    'enabled' => env('DB_QUERY_LOG', $defaultEnabled),
 
     'channel' => env('SQL_LOG_CHANNEL'),
 

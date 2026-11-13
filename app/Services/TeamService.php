@@ -7,6 +7,7 @@ use App\Models\Team;
 use App\Models\TeamLink;
 use App\Models\TeamRole;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -22,8 +23,12 @@ class TeamService
         3 => [0, 7000, 8000, 9000, 10000, 12000],
     ];
 
-    /** Return one row per source link, with the owning team and its roles. */
-    public function list(array $filters): Collection
+    /**
+     * Return one row per source link, with the owning team and its roles.
+     *
+     * 未指定月份时只查询当前月，并按来源链接分页。
+     */
+    public function list(array $filters, int $page = 1, int $perPage = 20): LengthAwarePaginator
     {
         $query = TeamLink::query()->with(['team.teamRoles.role']);
 
@@ -39,7 +44,13 @@ class TeamService
             $query->where('team_links.difficulty', (int) $filters['difficulty']);
         }
 
-        $query->whereHas('team', function (Builder $teamQuery) use ($filters): void {
+        $month = trim((string) ($filters['month'] ?? ''));
+        if ($month === '') {
+            $month = now()->format('Y-m');
+        }
+        [$year, $monthNumber] = array_map('intval', explode('-', $month));
+
+        $query->whereHas('team', function (Builder $teamQuery) use ($filters, $year, $monthNumber): void {
             foreach (['stage', 'boss'] as $field) {
                 if (array_key_exists($field, $filters) && $filters[$field] !== null && $filters[$field] !== '') {
                     $teamQuery->where($field, (int) $filters[$field]);
@@ -59,11 +70,8 @@ class TeamService
                 }
             }
 
-            if (!empty($filters['month'])) {
-                [$year, $month] = explode('-', $filters['month']);
-                $teamQuery->whereYear('created_at', (int) $year)
-                    ->whereMonth('created_at', (int) $month);
-            }
+            $teamQuery->whereYear('created_at', $year)
+                ->whereMonth('created_at', $monthNumber);
         });
 
         $links = $query->get();
@@ -78,7 +86,20 @@ class TeamService
                 ?: ((int) $b->id <=> (int) $a->id);
         })->values();
 
-        return $links->map(fn (TeamLink $link) => $this->presentLink($link))->values();
+        $total = $links->count();
+        $items = $links
+            ->forPage(max(1, $page), max(1, $perPage))
+            ->values()
+            ->map(fn (TeamLink $link) => $this->presentLink($link))
+            ->values()
+            ->all();
+
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            max(1, $perPage),
+            max(1, $page)
+        );
     }
 
     /** Find current-month visible D-stage lineups by the leftmost role nickname prefix. */

@@ -24,7 +24,7 @@ class TeamController extends Controller
     /** 作业列表与筛选 */
     public function index(Request $request)
     {
-        $filters = $request->validate([
+        $data = $request->validate([
             'month' => ['nullable', 'regex:/^\d{4}-(0[1-9]|1[0-2])$/'],
             'stage' => ['nullable', 'integer', 'between:1,5'],
             'boss' => ['nullable', 'integer', 'between:1,5'],
@@ -33,8 +33,17 @@ class TeamController extends Controller
             'author' => ['nullable', 'string', 'max:32'],
             'atk_type' => ['nullable', 'integer', Rule::in([-1, 0, 1])],
             'status' => ['nullable', 'integer', Rule::in([0, 1])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'between:1,100'],
+            'pageSize' => ['nullable', 'integer', 'between:1,100'],
         ]);
-        return $this->success($this->teamService->list($filters));
+
+        $page = (int) ($data['page'] ?? 1);
+        $perPage = (int) ($data['per_page'] ?? $data['pageSize'] ?? 20);
+
+        unset($data['page'], $data['per_page'], $data['pageSize']);
+
+        return $this->success($this->teamService->list($data, $page, $perPage));
     }
 
     /** 本月 D 阶段阵容首角色候选。 */
