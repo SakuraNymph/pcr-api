@@ -34,8 +34,6 @@ class UserPasswordResetApiTest extends TestCase
         $newToken = $this->user->createToken('user-token');
         $this->token = $newToken->plainTextToken;
         $this->currentTokenId = $newToken->accessToken->id;
-
-        $this->withHeader('Authorization', 'Bearer '.$this->token);
     }
 
     protected function tearDown(): void
@@ -45,10 +43,10 @@ class UserPasswordResetApiTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_registered_user_can_send_code_only_to_bound_email(): void
+    public function test_registered_user_can_request_code_for_email(): void
     {
         $response = $this->postJson('/api/user/password/reset-code', [
-            'email' => 'attacker@example.com',
+            'email' => $this->user->email,
         ])
             ->assertOk()
             ->assertJsonPath('status', 0)
@@ -70,12 +68,11 @@ class UserPasswordResetApiTest extends TestCase
         $code = $this->lastMailCode();
         $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
 
-        $payload = Cache::get(
-            'password_reset_code:'.$this->user->getKey()
-        );
+        $payload = Cache::get($this->codeKey('owner@example.com'));
 
         $this->assertIsArray($payload);
         $this->assertSame(hash('sha256', $code), $payload['code_hash']);
+        $this->assertSame($this->user->getKey(), $payload['user_id']);
         $this->assertArrayNotHasKey('code', $payload);
         $this->assertStringNotContainsString(
             $code,
@@ -83,7 +80,7 @@ class UserPasswordResetApiTest extends TestCase
         );
     }
 
-    public function test_guest_and_unauthenticated_users_cannot_use_password_reset(): void
+    public function test_unauthenticated_and_guest_users_can_use_password_reset(): void
     {
         $guest = $this->createUser('guest@example.com', 'old-password', 0);
         $plain = bin2hex(random_bytes(32));
@@ -93,71 +90,76 @@ class UserPasswordResetApiTest extends TestCase
         ]);
         $guestToken = $record->getKey().'|'.$plain;
 
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => $this->user->email,
+        ])->assertOk();
+
+        $code = $this->lastMailCode();
+
         $this->withHeader('Authorization', 'Bearer '.$guestToken)
-            ->postJson('/api/user/password/reset-code')
-            ->assertUnauthorized();
+            ->postJson('/api/user/password/reset-code', [
+                'email' => 'guest@example.com',
+            ])
+            ->assertOk();
 
-        $this->postJson('/api/user/password/verify-code', [
-            'code' => '123456',
-        ])->assertUnauthorized();
-
-        $this->putJson('/api/user/password/reset', [
-            'reset_token' => 'dummy-token',
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ])->assertUnauthorized();
+        // 游客账号即使有邮箱也不会收到找回密码邮件。
+        $this->assertCount(1, $this->mailMessages());
 
         $this->flushHeaders();
         Auth::forgetGuards();
 
-        $this->postJson('/api/user/password/reset-code')
-            ->assertUnauthorized();
+        $response = $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
+            'code' => $code,
+        ])->assertOk();
+
+        $this->putJson('/api/user/password/reset', [
+            'reset_token' => $response->json('data.reset_token'),
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ])->assertOk();
+
+        $this->assertTrue(
+            Hash::check('new-password', $this->user->fresh()->password)
+        );
     }
 
     public function test_send_code_is_limited_to_once_per_sixty_seconds(): void
     {
-        $this->postJson('/api/user/password/reset-code')->assertOk();
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => $this->user->email,
+        ])->assertOk();
 
-        $this->postJson('/api/user/password/reset-code')
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => $this->user->email,
+        ])
             ->assertStatus(429)
             ->assertJsonPath('msg', '验证码发送过于频繁，请稍后再试');
 
         Carbon::setTestNow(Carbon::parse('2026-11-04 12:01:01'));
 
-        $this->postJson('/api/user/password/reset-code')->assertOk();
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => $this->user->email,
+        ])->assertOk();
     }
 
-    public function test_send_code_requires_a_valid_bound_email(): void
+    public function test_password_reset_requests_require_a_valid_email(): void
     {
-        $noEmail = $this->createUser(null, 'old-password', 1);
-        $noEmailToken = $noEmail->createToken('user-token')->plainTextToken;
+        $this->postJson('/api/user/password/reset-code')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
 
-        $this->withHeader('Authorization', 'Bearer '.$noEmailToken)
-            ->postJson('/api/user/password/reset-code')
-            ->assertStatus(422)
-            ->assertJsonPath(
-                'msg',
-                '当前账号未绑定有效邮箱，无法找回密码'
-            );
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => 'not-an-email',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
 
-        $invalidEmail = $this->createUser(
-            'not-an-email',
-            'old-password',
-            1
-        );
-        $invalidToken = $invalidEmail
-            ->createToken('user-token')
-            ->plainTextToken;
-
-        Auth::forgetGuards();
-
-        $this->withHeader('Authorization', 'Bearer '.$invalidToken)
-            ->postJson('/api/user/password/reset-code')
-            ->assertStatus(422)
-            ->assertJsonPath(
-                'msg',
-                '当前账号未绑定有效邮箱，无法找回密码'
-            );
+        $this->postJson('/api/user/password/verify-code', [
+            'code' => '123456',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
 
         $this->assertCount(0, $this->mailMessages());
     }
@@ -168,15 +170,17 @@ class UserPasswordResetApiTest extends TestCase
             ->once()
             ->andThrow(new \RuntimeException('smtp down'));
 
-        $this->postJson('/api/user/password/reset-code')
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => $this->user->email,
+        ])
             ->assertStatus(500)
             ->assertJsonPath('msg', '验证码发送失败，请稍后重试');
 
         $this->assertFalse(
-            Cache::has('password_reset_code:'.$this->user->getKey())
+            Cache::has($this->codeKey((string) $this->user->email))
         );
         $this->assertFalse(
-            Cache::has('password_reset_send_limit:'.$this->user->getKey())
+            Cache::has($this->sendLimitKey((string) $this->user->email))
         );
     }
 
@@ -185,6 +189,7 @@ class UserPasswordResetApiTest extends TestCase
         $code = $this->sendCode();
 
         $response = $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $code,
         ])
             ->assertOk()
@@ -196,10 +201,11 @@ class UserPasswordResetApiTest extends TestCase
         $this->assertNotSame('', $resetToken);
         $this->assertSame(600, $response->json('data.expires_in'));
         $this->assertFalse(
-            Cache::has('password_reset_code:'.$this->user->getKey())
+            Cache::has($this->codeKey((string) $this->user->email))
         );
 
         $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $code,
         ])->assertStatus(422);
     }
@@ -211,6 +217,7 @@ class UserPasswordResetApiTest extends TestCase
 
         for ($attempt = 1; $attempt <= 4; $attempt++) {
             $this->postJson('/api/user/password/verify-code', [
+                'email' => $this->user->email,
                 'code' => $wrongCode,
             ])
                 ->assertStatus(422)
@@ -218,6 +225,7 @@ class UserPasswordResetApiTest extends TestCase
         }
 
         $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $wrongCode,
         ])
             ->assertStatus(429)
@@ -227,10 +235,11 @@ class UserPasswordResetApiTest extends TestCase
             );
 
         $this->assertFalse(
-            Cache::has('password_reset_code:'.$this->user->getKey())
+            Cache::has($this->codeKey((string) $this->user->email))
         );
 
         $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $code,
         ])->assertStatus(422);
     }
@@ -242,6 +251,7 @@ class UserPasswordResetApiTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-11-04 12:06:01'));
 
         $response = $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $code,
         ])->assertStatus(422);
 
@@ -255,19 +265,8 @@ class UserPasswordResetApiTest extends TestCase
     {
         $code = $this->sendCode();
 
-        $otherUser = $this->createUser(
-            'other@example.com',
-            'old-password',
-            1
-        );
-        $otherToken = $otherUser
-            ->createToken('user-token')
-            ->plainTextToken;
-
-        $this->withHeader('Authorization', 'Bearer '.$otherToken);
-        Auth::forgetGuards();
-
         $this->postJson('/api/user/password/verify-code', [
+            'email' => 'other@example.com',
             'code' => $code,
         ])->assertStatus(422);
 
@@ -277,20 +276,21 @@ class UserPasswordResetApiTest extends TestCase
             now()->addMinutes(5)
         );
 
-        $this->withHeader('Authorization', 'Bearer '.$this->token);
-        Auth::forgetGuards();
-
         $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => '123456',
         ])->assertStatus(422);
 
         $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $code,
         ])->assertOk();
     }
 
     public function test_reset_password_keeps_current_token_and_revokes_others(): void
     {
+        $this->withHeader('Authorization', 'Bearer '.$this->token);
+
         $otherToken = $this->user->createToken('other-device');
         $resetToken = $this->verifyCode();
 
@@ -375,7 +375,7 @@ class UserPasswordResetApiTest extends TestCase
             );
     }
 
-    public function test_reset_rejects_another_users_token(): void
+    public function test_reset_token_resolves_its_own_account_without_login(): void
     {
         $resetToken = $this->verifyCode();
 
@@ -384,27 +384,19 @@ class UserPasswordResetApiTest extends TestCase
             'old-password',
             1
         );
-        $otherToken = $otherUser
-            ->createToken('user-token')
-            ->plainTextToken;
-
-        $this->withHeader('Authorization', 'Bearer '.$otherToken);
-        Auth::forgetGuards();
-
-        $this->putJson('/api/user/password/reset', [
-            'reset_token' => $resetToken,
-            'password' => 'new-password',
-            'password_confirmation' => 'new-password',
-        ])->assertStatus(422);
-
-        $this->withHeader('Authorization', 'Bearer '.$this->token);
-        Auth::forgetGuards();
 
         $this->putJson('/api/user/password/reset', [
             'reset_token' => $resetToken,
             'password' => 'new-password',
             'password_confirmation' => 'new-password',
         ])->assertOk();
+
+        $this->assertTrue(
+            Hash::check('new-password', $this->user->fresh()->password)
+        );
+        $this->assertTrue(
+            Hash::check('old-password', $otherUser->fresh()->password)
+        );
     }
 
     public function test_reset_password_validation_and_same_password_rejection(): void
@@ -444,6 +436,8 @@ class UserPasswordResetApiTest extends TestCase
 
     public function test_ordinary_password_change_does_not_revoke_other_tokens(): void
     {
+        $this->withHeader('Authorization', 'Bearer '.$this->token);
+
         $otherToken = $this->user->createToken('other-device');
 
         $this->putJson('/api/user/password', [
@@ -460,9 +454,86 @@ class UserPasswordResetApiTest extends TestCase
         ]);
     }
 
+    public function test_unknown_email_returns_generic_success_without_sending_mail(): void
+    {
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => 'nobody@example.com',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 0)
+            ->assertJsonPath('data.retry_after', 60)
+            ->assertJsonPath('data.expires_in', 300);
+
+        $this->assertCount(0, $this->mailMessages());
+        $this->assertTrue(
+            Cache::has($this->sendLimitKey('nobody@example.com'))
+        );
+
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => 'nobody@example.com',
+        ])
+            ->assertStatus(429)
+            ->assertJsonPath('msg', '验证码发送过于频繁，请稍后再试');
+    }
+
+    public function test_duplicate_registered_emails_are_not_reset(): void
+    {
+        $this->createUser('owner@example.com', 'another-password', 1);
+
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => 'owner@example.com',
+        ])->assertOk();
+
+        $this->assertCount(0, $this->mailMessages());
+
+        $this->postJson('/api/user/password/verify-code', [
+            'email' => 'owner@example.com',
+            'code' => '123456',
+        ])->assertStatus(422);
+    }
+
+    public function test_reset_without_login_revokes_all_user_tokens(): void
+    {
+        $otherToken = $this->user->createToken('other-device');
+        $resetToken = $this->verifyCode();
+
+        $this->putJson('/api/user/password/reset', [
+            'reset_token' => $resetToken,
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $this->currentTokenId,
+        ]);
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'id' => $otherToken->accessToken->id,
+        ]);
+
+        Auth::forgetGuards();
+
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
+            ->getJson('/api/user/me')
+            ->assertUnauthorized();
+    }
+
+    public function test_reset_email_matching_is_case_insensitive(): void
+    {
+        $this->postJson('/api/user/password/reset-code', [
+            'email' => 'OWNER@EXAMPLE.COM',
+        ])->assertOk();
+
+        $this->postJson('/api/user/password/verify-code', [
+            'email' => 'owner@example.com',
+            'code' => $this->lastMailCode(),
+        ])->assertOk();
+    }
+
     private function sendCode(array $payload = []): string
     {
-        $this->postJson('/api/user/password/reset-code', $payload)
+        $this->postJson('/api/user/password/reset-code', array_merge([
+            'email' => $this->user->email,
+        ], $payload))
             ->assertOk();
 
         return $this->lastMailCode();
@@ -471,10 +542,26 @@ class UserPasswordResetApiTest extends TestCase
     private function verifyCode(): string
     {
         $response = $this->postJson('/api/user/password/verify-code', [
+            'email' => $this->user->email,
             'code' => $this->sendCode(),
         ])->assertOk();
 
         return (string) $response->json('data.reset_token');
+    }
+
+    private function codeKey(string $email): string
+    {
+        return 'password_reset_code:'.$this->emailKey($email);
+    }
+
+    private function sendLimitKey(string $email): string
+    {
+        return 'password_reset_send_limit:'.$this->emailKey($email);
+    }
+
+    private function emailKey(string $email): string
+    {
+        return hash('sha256', mb_strtolower(trim($email)));
     }
 
     private function mailMessages(): Collection

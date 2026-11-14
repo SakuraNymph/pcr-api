@@ -6,12 +6,14 @@ use App\Models\Admin;
 use App\Models\User;
 use App\Models\UserGuideConfig;
 use App\Models\VisitorToken;
+use App\Services\PublicUidService;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class UserAuthIdentityTest extends TestCase
@@ -581,6 +583,13 @@ class UserAuthIdentityTest extends TestCase
         // 六位唯一 public_uid。
         $publicUid = $session['user']['public_uid'];
         $this->assertMatchesRegularExpression('/^[1-9]\d{5}$/', (string) $publicUid);
+        $this->assertStringNotContainsString('4', (string) $publicUid);
+
+        $tier = app(PublicUidService::class)->classify((int) $publicUid);
+        $this->assertContains($tier, [
+            PublicUidService::TIER_PREMIUM,
+            PublicUidService::TIER_AUSPICIOUS,
+        ]);
 
         // 旧访客 Token 失效。
         $this->flushHeaders();
@@ -618,6 +627,45 @@ class UserAuthIdentityTest extends TestCase
             fn () => $second->save(),
             UniqueConstraintViolationException::class
         );
+    }
+
+    public function test_public_uid_assignment_is_idempotent(): void
+    {
+        $user = $this->createUser('uid@example.com', 'secret', 1);
+        $service = app(PublicUidService::class);
+
+        $first = $service->assign($user);
+        $second = $service->assign($user);
+
+        $this->assertSame($first, $second);
+        $this->assertSame($first, (int) $user->fresh()->public_uid);
+        $this->assertContains($service->classify($first), [
+            PublicUidService::TIER_PREMIUM,
+            PublicUidService::TIER_AUSPICIOUS,
+        ]);
+    }
+
+    public function test_public_uid_assignment_keeps_an_existing_uid(): void
+    {
+        $user = $this->createUser(
+            'existing-uid@example.com',
+            'secret',
+            1,
+            null,
+            100001
+        );
+
+        $this->assertSame(100001, app(PublicUidService::class)->assign($user));
+        $this->assertSame(100001, (int) $user->fresh()->public_uid);
+    }
+
+    public function test_public_uid_assignment_rejects_guest_users(): void
+    {
+        $guest = $this->createUser('guest-uid@example.com', 'secret', 0);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        app(PublicUidService::class)->assign($guest);
     }
 
     // ==================== 登录 ====================

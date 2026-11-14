@@ -4,16 +4,15 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\VisitorToken;
-use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class UserAuthService
 {
     public function __construct(
-        private readonly UserProfileService $userProfileService
+        private readonly UserProfileService $userProfileService,
+        private readonly PublicUidService $publicUidService
     ) {}
 
     /**
@@ -113,8 +112,8 @@ class UserAuthService
 
             $user->save();
 
-            // 随机六位 UID，撞码时重试。
-            $this->assignPublicUid($user);
+            // 按当前发放策略分配唯一六位 UID。
+            $this->publicUidService->assign($user);
 
             // 撤销旧凭证：新式 Visitor Token 与旧版 Sanctum Token。
             VisitorToken::query()
@@ -193,32 +192,5 @@ class UserAuthService
         }
 
         return inet_ntop($packedIp) ?: $ip;
-    }
-
-    /**
-     * 在注册事务内为正式用户分配唯一六位 UID（100000-999999）。
-     */
-    private function assignPublicUid(User $user): void
-    {
-        for ($attempt = 0; $attempt < 10; $attempt++) {
-            $candidate = random_int(100000, 999999);
-
-            try {
-                $affected = User::query()
-                    ->whereKey($user->getKey())
-                    ->whereNull('public_uid')
-                    ->update(['public_uid' => $candidate]);
-            } catch (UniqueConstraintViolationException $exception) {
-                continue;
-            }
-
-            if ($affected === 1) {
-                $user->public_uid = $candidate;
-
-                return;
-            }
-        }
-
-        throw new RuntimeException('无法分配唯一用户 UID，请稍后重试');
     }
 }

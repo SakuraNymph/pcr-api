@@ -238,6 +238,24 @@ Route::prefix('user')->group(function () {
     // 用户登录
     Route::post('login', [UserAuthController::class, 'login']);
 
+    // 忘记密码：发送邮箱验证码
+    Route::post(
+        'password/reset-code',
+        [UserPasswordResetController::class, 'sendCode']
+    )->middleware('throttle:10,1');
+
+    // 忘记密码：验证邮箱验证码
+    Route::post(
+        'password/verify-code',
+        [UserPasswordResetController::class, 'verifyCode']
+    )->middleware('throttle:10,1');
+
+    // 忘记密码：使用一次性凭证重置密码
+    Route::put(
+        'password/reset',
+        [UserPasswordResetController::class, 'resetPassword']
+    )->middleware('throttle:10,1');
+
     // 意见反馈图片：使用短期签名 URL，不依赖 Authorization 头
     Route::get('feedback/images/{image}', [UserFeedbackImageController::class, 'show'])
         ->whereNumber('image')
@@ -262,6 +280,7 @@ Route::prefix('user')->group(function () {
     Route::middleware([
         'user.auth',
         'user.identity:any',
+        'user.visit',
     ])->group(function () {
 
         // 获取当前用户的个人作业列表
@@ -327,6 +346,7 @@ Route::prefix('user')->group(function () {
     Route::middleware([
         'user.auth',
         'user.identity:registered',
+        'user.visit',
     ])->group(function () {
 
         // 当前登录用户信息
@@ -555,24 +575,6 @@ Route::prefix('user')->group(function () {
 
         // 修改密码
         Route::put('password', [UserProfileController::class, 'updatePassword']);
-
-        // 忘记密码：发送邮箱验证码
-        Route::post(
-            'password/reset-code',
-            [UserPasswordResetController::class, 'sendCode']
-        );
-
-        // 忘记密码：验证邮箱验证码
-        Route::post(
-            'password/verify-code',
-            [UserPasswordResetController::class, 'verifyCode']
-        );
-
-        // 忘记密码：使用一次性凭证重置密码
-        Route::put(
-            'password/reset',
-            [UserPasswordResetController::class, 'resetPassword']
-        );
 
         // 用户退出登录
         Route::post('logout', [UserAuthController::class, 'logout']);

@@ -9,6 +9,7 @@ use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -16,60 +17,65 @@ use Laravel\Sanctum\PersonalAccessToken;
 class UserPasswordResetService
 {
     /**
-     * 发送密码找回验证码到当前用户绑定的邮箱。
+     * 向指定注册邮箱发送密码找回验证码。
+     *
+     * 未匹配到正式用户时也返回相同结构，避免暴露邮箱是否已注册。
      *
      * @return array{retry_after:int, expires_in:int}
      */
-    public function sendCode(User $user): array
+    public function sendCode(string $email): array
     {
-        $email = trim((string) $user->email);
-
-        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new PasswordResetException('当前账号未绑定有效邮箱，无法找回密码');
-        }
-
-        $lock = $this->acquireLock($this->sendLockKey($user));
+        $email = $this->normalizeEmail($email);
+        $emailKey = $this->emailKey($email);
+        $lock = $this->acquireLock($this->sendLockKey($emailKey));
 
         try {
-            if (Cache::has($this->sendLimitKey($user))) {
+            if (Cache::has($this->sendLimitKey($emailKey))) {
                 throw new PasswordResetException(
                     '验证码发送过于频繁，请稍后再试',
                     429
                 );
             }
 
-            // 新验证码会同时作废旧验证码和旧重置凭证。
-            Cache::forget($this->codeKey($user));
-            Cache::forget($this->activeTokenKey($user));
-
-            $code = (string) random_int(100000, 999999);
             $ttlMinutes = max(
                 1,
                 (int) config('profile.password_reset_code_ttl_minutes', 5)
             );
             $expiresAt = now()->addMinutes($ttlMinutes);
+            $user = $this->findRegisteredUserByEmail($email);
 
-            try {
-                $this->sendCodeEmail($email, $code, $ttlMinutes);
-            } catch (\Throwable $exception) {
-                report($exception);
+            if ($user instanceof User) {
+                $boundEmail = trim((string) $user->email);
 
-                throw new PasswordResetException(
-                    '验证码发送失败，请稍后重试',
-                    500
+                // 新验证码会同时作废旧验证码和旧重置凭证。
+                Cache::forget($this->codeKey($emailKey));
+                Cache::forget($this->activeTokenKey($user));
+
+                $code = (string) random_int(100000, 999999);
+
+                try {
+                    $this->sendCodeEmail($boundEmail, $code, $ttlMinutes);
+                } catch (\Throwable $exception) {
+                    report($exception);
+
+                    throw new PasswordResetException(
+                        '验证码发送失败，请稍后重试',
+                        500
+                    );
+                }
+
+                Cache::put(
+                    $this->codeKey($emailKey),
+                    [
+                        'code_hash' => hash('sha256', $code),
+                        'user_id' => (int) $user->getKey(),
+                        'email' => $boundEmail,
+                        'attempts' => 0,
+                        'expires_at' => $expiresAt->getTimestamp(),
+                    ],
+                    $expiresAt
                 );
             }
-
-            Cache::put(
-                $this->codeKey($user),
-                [
-                    'code_hash' => hash('sha256', $code),
-                    'email' => $email,
-                    'attempts' => 0,
-                    'expires_at' => $expiresAt->getTimestamp(),
-                ],
-                $expiresAt
-            );
 
             $interval = max(
                 1,
@@ -77,7 +83,7 @@ class UserPasswordResetService
             );
 
             Cache::put(
-                $this->sendLimitKey($user),
+                $this->sendLimitKey($emailKey),
                 true,
                 now()->addSeconds($interval)
             );
@@ -95,16 +101,18 @@ class UserPasswordResetService
     }
 
     /**
-     * 校验验证码并签发一次性重置凭证。
+     * 校验指定邮箱的验证码并签发一次性重置凭证。
      *
      * @return array{reset_token:string, expires_in:int}
      */
-    public function verifyCode(User $user, string $code): array
+    public function verifyCode(string $email, string $code): array
     {
-        $lock = $this->acquireLock($this->codeLockKey($user));
+        $email = $this->normalizeEmail($email);
+        $emailKey = $this->emailKey($email);
+        $lock = $this->acquireLock($this->codeLockKey($emailKey));
 
         try {
-            $payload = Cache::get($this->codeKey($user));
+            $payload = Cache::get($this->codeKey($emailKey));
 
             if (! is_array($payload) || ! isset($payload['code_hash'])) {
                 throw new PasswordResetException(
@@ -115,15 +123,28 @@ class UserPasswordResetService
             $expiresAt = (int) ($payload['expires_at'] ?? 0);
 
             if ($expiresAt <= now()->getTimestamp()) {
-                Cache::forget($this->codeKey($user));
+                Cache::forget($this->codeKey($emailKey));
 
                 throw new PasswordResetException(
                     '验证码已过期，请重新发送'
                 );
             }
 
-            if (($payload['email'] ?? null) !== $user->email) {
-                Cache::forget($this->codeKey($user));
+            $user = User::query()
+                ->where('status', 1)
+                ->find((int) ($payload['user_id'] ?? 0));
+
+            if (
+                ! $user instanceof User
+                || $this->normalizeEmail((string) $user->email)
+                    !== $this->normalizeEmail(
+                        (string) ($payload['email'] ?? '')
+                    )
+                || $this->normalizeEmail(
+                    (string) ($payload['email'] ?? '')
+                ) !== $email
+            ) {
+                Cache::forget($this->codeKey($emailKey));
 
                 throw new PasswordResetException(
                     '验证码已失效，请重新发送'
@@ -137,7 +158,7 @@ class UserPasswordResetService
             $attempts = (int) ($payload['attempts'] ?? 0);
 
             if ($attempts >= $maxAttempts) {
-                Cache::forget($this->codeKey($user));
+                Cache::forget($this->codeKey($emailKey));
 
                 throw new PasswordResetException(
                     '验证码错误次数过多，请稍后重新发送',
@@ -152,7 +173,7 @@ class UserPasswordResetService
                 $attempts++;
 
                 if ($attempts >= $maxAttempts) {
-                    Cache::forget($this->codeKey($user));
+                    Cache::forget($this->codeKey($emailKey));
 
                     throw new PasswordResetException(
                         '验证码错误次数过多，请稍后重新发送',
@@ -163,7 +184,7 @@ class UserPasswordResetService
                 $payload['attempts'] = $attempts;
 
                 Cache::put(
-                    $this->codeKey($user),
+                    $this->codeKey($emailKey),
                     $payload,
                     max(1, $expiresAt - now()->getTimestamp())
                 );
@@ -174,7 +195,7 @@ class UserPasswordResetService
             }
 
             // 验证码只能使用一次。
-            Cache::forget($this->codeKey($user));
+            Cache::forget($this->codeKey($emailKey));
 
             $token = Str::random(64);
             $tokenHash = hash('sha256', $token);
@@ -189,7 +210,7 @@ class UserPasswordResetService
                 $this->tokenKey($tokenHash),
                 [
                     'user_id' => (int) $user->getKey(),
-                    'email' => $user->email,
+                    'email' => trim((string) $user->email),
                 ],
                 $tokenExpiresAt
             );
@@ -215,23 +236,43 @@ class UserPasswordResetService
      * 使用一次性重置凭证修改密码，并撤销其他设备的 Token。
      */
     public function resetPassword(
-        User $user,
         string $resetToken,
-        string $password
+        string $password,
+        ?User $currentUser = null
     ): void {
         $tokenHash = hash('sha256', $resetToken);
         $lock = $this->acquireLock($this->tokenLockKey($tokenHash));
 
         try {
-            $activeTokenHash = Cache::get($this->activeTokenKey($user));
             $payload = Cache::get($this->tokenKey($tokenHash));
+
+            if (! is_array($payload)) {
+                throw new PasswordResetException(
+                    '重置凭证无效或已过期，请重新验证邮箱'
+                );
+            }
+
+            $user = User::query()
+                ->where('status', 1)
+                ->find((int) ($payload['user_id'] ?? 0));
+
+            if (
+                ! $user instanceof User
+                || $this->normalizeEmail((string) $user->email)
+                    !== $this->normalizeEmail(
+                        (string) ($payload['email'] ?? '')
+                    )
+            ) {
+                throw new PasswordResetException(
+                    '重置凭证无效或已过期，请重新验证邮箱'
+                );
+            }
+
+            $activeTokenHash = Cache::get($this->activeTokenKey($user));
 
             if (
                 ! is_string($activeTokenHash)
                 || ! hash_equals($activeTokenHash, $tokenHash)
-                || ! is_array($payload)
-                || (int) ($payload['user_id'] ?? 0) !== (int) $user->getKey()
-                || ($payload['email'] ?? null) !== $user->email
             ) {
                 throw new PasswordResetException(
                     '重置凭证无效或已过期，请重新验证邮箱'
@@ -248,11 +289,18 @@ class UserPasswordResetService
             Cache::forget($this->tokenKey($tokenHash));
             Cache::forget($this->activeTokenKey($user));
 
-            DB::transaction(function () use ($user, $password): void {
+            DB::transaction(function () use (
+                $user,
+                $password,
+                $currentUser
+            ): void {
                 $user->password = $password;
                 $user->save();
 
-                $currentToken = $user->currentAccessToken();
+                $currentToken = $currentUser instanceof User
+                    && (int) $currentUser->getKey() === (int) $user->getKey()
+                    ? $currentUser->currentAccessToken()
+                    : null;
                 $currentTokenId = $currentToken instanceof PersonalAccessToken
                     ? $currentToken->getKey()
                     : null;
@@ -268,6 +316,36 @@ class UserPasswordResetService
         } finally {
             $lock->release();
         }
+    }
+
+    private function findRegisteredUserByEmail(string $email): ?User
+    {
+        $users = User::query()
+            ->where('status', 1)
+            ->whereRaw(
+                'LOWER(email) = ?',
+                [$this->normalizeEmail($email)]
+            )
+            ->limit(2)
+            ->get();
+
+        if ($users->count() > 1) {
+            Log::warning(
+                'Password reset email matched multiple registered users',
+                [
+                    'user_ids' => $users->pluck('id')->all(),
+                ]
+            );
+
+            return null;
+        }
+
+        return $users->first();
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        return mb_strtolower(trim($email));
     }
 
     private function sendCodeEmail(
@@ -333,24 +411,29 @@ class UserPasswordResetService
         return $lock;
     }
 
-    private function codeKey(User $user): string
+    private function emailKey(string $email): string
     {
-        return 'password_reset_code:'.$user->getKey();
+        return hash('sha256', $this->normalizeEmail($email));
     }
 
-    private function sendLimitKey(User $user): string
+    private function codeKey(string $emailKey): string
     {
-        return 'password_reset_send_limit:'.$user->getKey();
+        return 'password_reset_code:'.$emailKey;
     }
 
-    private function sendLockKey(User $user): string
+    private function sendLimitKey(string $emailKey): string
     {
-        return 'password_reset_send_lock:'.$user->getKey();
+        return 'password_reset_send_limit:'.$emailKey;
     }
 
-    private function codeLockKey(User $user): string
+    private function sendLockKey(string $emailKey): string
     {
-        return 'password_reset_code_lock:'.$user->getKey();
+        return 'password_reset_send_lock:'.$emailKey;
+    }
+
+    private function codeLockKey(string $emailKey): string
+    {
+        return 'password_reset_code_lock:'.$emailKey;
     }
 
     private function activeTokenKey(User $user): string

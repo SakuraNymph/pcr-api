@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.identity' => \App\Http\Middleware\EnsureAdminIdentity::class,
             'user.identity' => \App\Http\Middleware\EnsureUserIdentity::class,
             'user.auth' => \App\Http\Middleware\EnsureUserAuth::class,
+            'user.visit' => \App\Http\Middleware\RecordDailyUserVisit::class,
             'super.admin' => \App\Http\Middleware\EnsureSuperAdmin::class,
         ]);
     })
