@@ -237,6 +237,49 @@ class UserTripleApiTest extends TestCase
         );
     }
 
+    public function test_mode_filter_limits_user_candidates_before_combining(): void
+    {
+        $automatic = [
+            $this->createTeam(1, 100, [1 => 1, 2 => 1, 3 => 1], $this->user->id, mode: 1),
+            $this->createTeam(2, 100, [4 => 1, 5 => 1, 6 => 1], $this->user->id, mode: 1),
+            $this->createTeam(3, 100, [7 => 1, 8 => 1, 9 => 1], $this->user->id, mode: 1),
+        ];
+        $manual = [
+            $this->createTeam(1, 100, [10 => 1, 11 => 1, 12 => 1], $this->user->id, mode: 2),
+            $this->createTeam(2, 100, [13 => 1, 14 => 1, 15 => 1], $this->user->id, mode: 2),
+            $this->createTeam(3, 100, [16 => 1, 17 => 1, 18 => 1], $this->user->id, mode: 2),
+        ];
+
+        Sanctum::actingAs($this->user);
+
+        $automaticResponse = $this->postJson(self::URL, ['mode' => 1])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+        $manualResponse = $this->postJson(self::URL, ['mode' => 2])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $automatic),
+            array_column($automaticResponse, 'id')
+        );
+        $this->assertSame(
+            array_map(static fn (Team $team): int => $team->id, $manual),
+            array_column($manualResponse, 'id')
+        );
+    }
+
+    public function test_mode_filter_rejects_invalid_values(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->postJson(self::URL, ['mode' => 3])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('mode');
+    }
+
     public function test_status_zero_role_is_forced_to_be_borrowed(): void
     {
         $first = $this->createTeam(1, 100, [1 => 0, 2 => 1, 3 => 1], $this->user->id);

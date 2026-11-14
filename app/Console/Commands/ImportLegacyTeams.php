@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\SystemTeamSourceService;
 use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Console\Command;
@@ -41,7 +42,7 @@ class ImportLegacyTeams extends Command
         5 => '目押',
     ];
 
-    public function handle(): int
+    public function handle(SystemTeamSourceService $sourceCache): int
     {
         try {
             $path = $this->resolvePath();
@@ -72,6 +73,10 @@ class ImportLegacyTeams extends Command
                 ),
                 3,
             );
+            $sourceCache->forgetMonths($this->affectedMonths(
+                $prepared['included'],
+                $copies,
+            ));
 
             $this->info(sprintf(
                 '导入完成：原始新增 %d 条，副本新增 %d 条；原始跳过 %d 条，副本跳过 %d 条。',
@@ -519,6 +524,40 @@ class ImportLegacyTeams extends Command
             .'|'.(int) $team['mode']
             .'|'.(int) $team['stage']
             .'|'.(int) $team['boss'];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $included
+     * @param  array<int, array<string, mixed>>  $copies
+     * @return array<int, string>
+     */
+    private function affectedMonths(array $included, array $copies): array
+    {
+        $months = [];
+
+        foreach ($included as $entry) {
+            $this->appendMonth($months, $entry['team']['created_at'] ?? null);
+        }
+
+        foreach ($copies as $copy) {
+            $this->appendMonth($months, $copy['team']['created_at'] ?? null);
+        }
+
+        return array_keys($months);
+    }
+
+    /**
+     * @param  array<string, bool>  $months
+     */
+    private function appendMonth(array &$months, mixed $createdAt): void
+    {
+        $month = substr((string) $createdAt, 0, 7);
+
+        if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month) !== 1) {
+            return;
+        }
+
+        $months[str_replace('-', '', $month)] = true;
     }
 
     /**

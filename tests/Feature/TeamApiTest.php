@@ -13,6 +13,7 @@ use Database\Seeders\TeamPermissionSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
@@ -478,6 +479,132 @@ class TeamApiTest extends TestCase
             ->assertJsonCount(2, 'data.data');
     }
 
+    public function test_update_endpoint_updates_shared_fields_roles_and_primary_link(): void
+    {
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 4,
+            bosses: [1],
+            damage: 5000,
+            roles: [101, 102],
+            author: '第一作者',
+            link: 'https://example.com/first',
+        ))->assertOk();
+        $this->postJson('/api/admin/game/teams', $this->batchPayload(
+            stage: 4,
+            bosses: [1],
+            damage: 6000,
+            roles: [101, 102],
+            author: '第二作者',
+            link: 'https://example.com/second',
+        ))->assertOk();
+
+        $team = Team::query()->firstOrFail();
+        $links = TeamLink::query()
+            ->where('team_id', $team->id)
+            ->orderBy('id')
+            ->get();
+
+        $this->assertCount(2, $links);
+
+        $this->putJson("/api/admin/game/teams/{$team->id}", [
+            'author' => '修改作者',
+            'link' => 'https://example.com/updated',
+            'stage' => 4,
+            'boss' => 2,
+            'difficulty' => 5,
+            'damage' => 7777,
+            'roles' => [105, 101],
+        ])->assertOk()
+            ->assertJsonPath('data.stage', 4)
+            ->assertJsonPath('data.boss', 2)
+            ->assertJsonPath('data.mode', 2)
+            ->assertJsonPath('data.damage', 7777)
+            ->assertJsonPath('data.roles.0.role_id', 101)
+            ->assertJsonPath('data.roles.1.role_id', 105);
+
+        $this->assertDatabaseHas('teams', [
+            'id' => $team->id,
+            'stage' => 4,
+            'boss' => 2,
+            'mode' => 2,
+            'team_key' => '101,105',
+            'atk_value' => 2,
+            'damage' => 7777,
+        ]);
+        $this->assertDatabaseCount('team_roles', 2);
+        $this->assertDatabaseHas('team_links', [
+            'id' => $links[0]->id,
+            'author' => '修改作者',
+            'url' => 'https://example.com/updated',
+            'difficulty' => 5,
+            'damage' => 7777,
+        ]);
+        $this->assertDatabaseHas('team_links', [
+            'id' => $links[1]->id,
+            'author' => '第二作者',
+            'url' => 'https://example.com/second',
+            'difficulty' => 1,
+            'damage' => 6000,
+        ]);
+    }
+
+    public function test_team_store_and_update_invalidate_system_source_cache(): void
+    {
+        $current = now()->format('Ym');
+        $previous = now()->copy()->subMonthNoOverflow()->format('Ym');
+
+        $this->seedSystemSourceCache($current, $previous);
+        $this->postJson('/api/admin/game/teams', $this->batchPayload())
+            ->assertOk();
+        $this->assertSystemSourceCacheForgotten($current, $previous);
+
+        $team = Team::query()->firstOrFail();
+        $this->seedSystemSourceCache($current, $previous);
+        $this->putJson("/api/admin/game/teams/{$team->id}", [
+            'author' => '修改作者',
+            'link' => 'https://example.com/updated',
+            'stage' => 2,
+            'boss' => 1,
+            'difficulty' => 1,
+            'damage' => 4200,
+            'roles' => [101, 102],
+        ])->assertOk();
+        $this->assertSystemSourceCacheForgotten($current, $previous);
+    }
+
+    public function test_team_status_and_link_writes_invalidate_system_source_cache(): void
+    {
+        $current = now()->format('Ym');
+        $previous = now()->copy()->subMonthNoOverflow()->format('Ym');
+
+        $this->postJson('/api/admin/game/teams', $this->batchPayload())
+            ->assertOk();
+        $team = Team::query()->firstOrFail();
+        $link = TeamLink::query()->where('team_id', $team->id)->firstOrFail();
+
+        $this->seedSystemSourceCache($current, $previous);
+        $this->patchJson("/api/admin/game/teams/{$team->id}/status", [
+            'status' => 0,
+        ])->assertOk();
+        $this->assertSystemSourceCacheForgotten($current, $previous);
+
+        $this->seedSystemSourceCache($current, $previous);
+        $this->putJson("/api/admin/game/teams/{$team->id}/links/{$link->id}", [
+            'author' => '链接作者',
+            'link' => 'https://example.com/link-updated',
+            'difficulty' => 2,
+            'damage' => 4300,
+        ])->assertOk();
+        $this->assertSystemSourceCacheForgotten($current, $previous);
+
+        $this->seedSystemSourceCache($current, $previous);
+        $this->patchJson(
+            "/api/admin/game/teams/{$team->id}/links/{$link->id}/status",
+            ['status' => 0]
+        )->assertOk();
+        $this->assertSystemSourceCacheForgotten($current, $previous);
+    }
+
     public function test_invalid_game_role_is_rejected_without_creating_partial_rows(): void
     {
         $payload = $this->batchPayload();
@@ -754,6 +881,55 @@ class TeamApiTest extends TestCase
         $this->assertContains('system:team-link:status', $codes);
         $this->assertContains('system:team:d-stage-lineup-options', $codes);
         $this->assertContains('system:custom:existing', $codes);
+    }
+
+    private function seedSystemSourceCache(
+        string $current,
+        string $previous
+    ): void {
+        foreach ([$current, $previous] as $yearMonth) {
+            foreach (['low', 'high'] as $pool) {
+                Cache::put(
+                    "system-source:rows:v1:{$yearMonth}:{$pool}",
+                    ['stub' => true],
+                    now()->addHour()
+                );
+            }
+
+            Cache::put(
+                "systemTripleTeams:{$yearMonth}",
+                ['stub' => true],
+                now()->addHour()
+            );
+            Cache::put(
+                "systemTripleTeamsMakeTeams:{$yearMonth}",
+                ['stub' => true],
+                now()->addHour()
+            );
+        }
+    }
+
+    private function assertSystemSourceCacheForgotten(
+        string $current,
+        string $previous
+    ): void {
+        foreach (['low', 'high'] as $pool) {
+            $this->assertFalse(Cache::has(
+                "system-source:rows:v1:{$current}:{$pool}"
+            ));
+            $this->assertTrue(Cache::has(
+                "system-source:rows:v1:{$previous}:{$pool}"
+            ));
+        }
+
+        $this->assertFalse(Cache::has("systemTripleTeams:{$current}"));
+        $this->assertFalse(
+            Cache::has("systemTripleTeamsMakeTeams:{$current}")
+        );
+        $this->assertTrue(Cache::has("systemTripleTeams:{$previous}"));
+        $this->assertTrue(
+            Cache::has("systemTripleTeamsMakeTeams:{$previous}")
+        );
     }
 
     private function batchPayload(

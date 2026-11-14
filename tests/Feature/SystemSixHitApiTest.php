@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Admin;
 use App\Models\GameRole;
-use App\Models\SystemSixHitResultCache;
 use App\Models\Team;
 use App\Models\TeamLink;
 use App\Models\TeamRole;
 use App\Models\User;
 use App\Models\UserRolePool;
 use App\Services\SystemSixHitService;
+use App\Services\SystemTeamSourceService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -432,7 +432,6 @@ class SystemSixHitApiTest extends TestCase
             ->json('data');
 
         $this->assertCount(10, $packages);
-        $this->assertDatabaseCount('system_six_hit_triples', 0);
     }
 
     public function test_current_missing_role_is_borrowed_and_status_is_account_aware(): void
@@ -529,11 +528,8 @@ class SystemSixHitApiTest extends TestCase
         ])->assertOk()->assertJsonCount(1, 'data')->json('data');
 
         $this->assertSame($first, $second);
-        $this->assertDatabaseCount('system_six_hit_cache_sets', 1);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 1);
-        $this->assertDatabaseCount('system_six_hit_triples', 0);
+        $this->assertCount(1, $this->sixHitCachePayloads());
 
-        SystemSixHitResultCache::query()->delete();
         $third = $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
             'lowBosses' => [1],
@@ -541,7 +537,7 @@ class SystemSixHitApiTest extends TestCase
         ])->assertOk()->assertJsonCount(1, 'data')->json('data');
 
         $this->assertSame($first, $third);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 0);
+        $this->assertCount(1, $this->sixHitCachePayloads());
     }
 
     public function test_result_cache_key_covers_all_computation_inputs(): void
@@ -628,12 +624,12 @@ class SystemSixHitApiTest extends TestCase
         $this->assertNotSame($key, $differentVersionKey);
     }
 
-    public function test_legacy_result_cache_is_read_and_backfilled(): void
+    public function test_six_hit_results_are_stored_only_in_laravel_cache(): void
     {
         $this->createSixTeams(1);
         $pool = UserRolePool::create([
             'uid' => $this->user->id,
-            'nickname' => '回填账号',
+            'nickname' => '纯缓存账号',
             'roles' => range(1, 18),
             'status' => 1,
         ]);
@@ -643,28 +639,7 @@ class SystemSixHitApiTest extends TestCase
             'accountId' => $pool->id,
         ])->assertOk()->assertJsonCount(1, 'data');
 
-        $legacy = SystemSixHitResultCache::query()->firstOrFail();
-        $cacheKeyPrefix = (new \ReflectionClassConstant(
-            SystemSixHitService::class,
-            'RESULT_CACHE_KEY_PREFIX'
-        ))->getValue();
-
-        DB::table('system_six_hit_result_caches')
-            ->where('id', $legacy->id)
-            ->update(['results' => json_encode([], JSON_THROW_ON_ERROR)]);
-        Cache::forget($cacheKeyPrefix.$legacy->cache_key);
-
-        $this->postJson(self::CURRENT_URL, [
-            'accountId' => $pool->id,
-        ])->assertOk()->assertJsonCount(0, 'data');
-
-        DB::table('system_six_hit_result_caches')
-            ->where('id', $legacy->id)
-            ->delete();
-
-        $this->postJson(self::CURRENT_URL, [
-            'accountId' => $pool->id,
-        ])->assertOk()->assertJsonCount(0, 'data');
+        $this->assertCount(1, $this->sixHitCachePayloads());
     }
 
     public function test_locked_ids_limit_two_per_stage_and_hidden_ids_are_unlimited(): void
@@ -839,8 +814,9 @@ class SystemSixHitApiTest extends TestCase
         $this->assertSame(0, $package['permutation_index']);
         $this->assertSame(0, $package['borrow_count']);
 
-        $cache = SystemSixHitResultCache::query()->firstOrFail();
-        $checks = $cache->results[0]['permutation_checks'];
+        $payloads = $this->sixHitCachePayloads();
+        $this->assertCount(1, $payloads);
+        $checks = $payloads[0][0]['permutation_checks'];
 
         $this->assertCount(6, $checks);
         $this->assertSame(
@@ -878,8 +854,9 @@ class SystemSixHitApiTest extends TestCase
         $this->assertSame(0, $package['permutation_index']);
         $this->assertSame(1, $package['borrow_count']);
 
-        $cache = SystemSixHitResultCache::query()->firstOrFail();
-        $checks = $cache->results[0]['permutation_checks'];
+        $payloads = $this->sixHitCachePayloads();
+        $this->assertCount(1, $payloads);
+        $checks = $payloads[0][0]['permutation_checks'];
 
         $this->assertSame(
             [true, true, false, false, false, false],
@@ -916,10 +893,9 @@ class SystemSixHitApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0, 'data');
 
-        $this->assertDatabaseCount('system_six_hit_result_caches', 1);
-        $this->assertDatabaseHas('system_six_hit_result_caches', [
-            'result_count' => 0,
-        ]);
+        $payloads = $this->sixHitCachePayloads();
+        $this->assertCount(1, $payloads);
+        $this->assertSame([], $payloads[0]);
     }
 
     public function test_same_role_in_three_pairs_uses_three_borrows(): void
@@ -991,7 +967,7 @@ class SystemSixHitApiTest extends TestCase
             10,
             $this->findTeamWithRole($missingPackage, 10)['borrow']
         );
-        $this->assertDatabaseCount('system_six_hit_result_caches', 2);
+        $this->assertCount(2, $this->sixHitCachePayloads());
 
         $missingPool->update(['roles' => range(1, 18)]);
         $updatedPackage = $this->postJson(self::CURRENT_URL, [
@@ -999,7 +975,7 @@ class SystemSixHitApiTest extends TestCase
         ])->assertOk()->json('data.0');
 
         $this->assertSame(0, $updatedPackage['borrow_count']);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 3);
+        $this->assertCount(3, $this->sixHitCachePayloads());
     }
 
     public function test_previous_month_does_not_query_user_role_pools(): void
@@ -1196,24 +1172,25 @@ class SystemSixHitApiTest extends TestCase
 
         Sanctum::actingAs($this->guest);
         $this->postJson(self::PREVIOUS_URL)->assertOk();
-        $previousResultId = SystemSixHitResultCache::query()
-            ->where('endpoint', 2)
-            ->value('id');
+        $previousPayloads = $this->sixHitCachePayloads();
+        $this->assertCount(1, $previousPayloads);
+        $previousResults = $previousPayloads[0];
 
         Sanctum::actingAs($this->user);
         $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
         ])->assertOk();
-        $this->assertDatabaseCount('system_six_hit_cache_sets', 2);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 2);
+        $this->assertCount(2, $this->sixHitCachePayloads());
 
         $current[0]->update(['damage' => 2]);
+        app(SystemTeamSourceService::class)->forgetMonth(
+            $current[0]->created_at->format('Ym')
+        );
         $damagePackage = $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
         ])->assertOk()->json('data.0');
         $this->assertSame(31.5, $damagePackage['score']);
-        $this->assertDatabaseCount('system_six_hit_cache_sets', 3);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 3);
+        $this->assertCount(3, $this->sixHitCachePayloads());
 
         TeamRole::query()
             ->where('team_id', $current[1]->id)
@@ -1225,22 +1202,68 @@ class SystemSixHitApiTest extends TestCase
             'role_id' => 20,
             'status' => 1,
         ]);
+        app(SystemTeamSourceService::class)->forgetMonth(
+            $current[1]->created_at->format('Ym')
+        );
 
         $this->postJson(self::CURRENT_URL, [
             'accountId' => $pool->id,
         ])->assertOk()->assertJsonCount(1, 'data');
-        $this->assertDatabaseCount('system_six_hit_cache_sets', 4);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 4);
+        $this->assertCount(4, $this->sixHitCachePayloads());
 
         Sanctum::actingAs($this->guest);
         $this->postJson(self::PREVIOUS_URL)->assertOk();
+        $payloads = $this->sixHitCachePayloads();
+
         $this->assertSame(
-            $previousResultId,
-            SystemSixHitResultCache::query()
-                ->where('endpoint', 2)
-                ->value('id')
+            $previousResults,
+            $payloads[0]
         );
-        $this->assertDatabaseCount('system_six_hit_result_caches', 4);
+        $this->assertCount(4, $payloads);
+    }
+
+    public function test_source_rows_are_cached_in_separate_low_and_high_pools(): void
+    {
+        $this->createSixTeams(
+            1,
+            Carbon::parse('2026-10-10 12:00:00')
+        );
+
+        Sanctum::actingAs($this->guest);
+        $this->postJson(self::PREVIOUS_URL)->assertOk();
+
+        $low = Cache::get('system-source:rows:v1:202610:low');
+        $high = Cache::get('system-source:rows:v1:202610:high');
+
+        $this->assertIsArray($low);
+        $this->assertIsArray($high);
+        $this->assertSame([2, 3], $low['stages']);
+        $this->assertSame([4], $high['stages']);
+        $this->assertSame(
+            [2, 3],
+            array_values(array_unique(
+                array_column($low['rows']['teams'], 'stage')
+            ))
+        );
+        $this->assertSame(
+            [4],
+            array_values(array_unique(
+                array_column($high['rows']['teams'], 'stage')
+            ))
+        );
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $this->postJson(self::PREVIOUS_URL)->assertOk();
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        foreach ($queries as $query) {
+            $this->assertDoesNotMatchRegularExpression(
+                '/\b(teams|team_roles|team_links)\b/',
+                (string) ($query['query'] ?? '')
+            );
+        }
     }
 
     public function test_returns_empty_when_high_stage_has_no_triple(): void
@@ -1298,6 +1321,17 @@ class SystemSixHitApiTest extends TestCase
             );
         }
 
+        foreach ($lowC as $roles) {
+            $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: 3,
+                createdAt: $createdAt
+            );
+        }
+
         foreach ($high as $roles) {
             $this->createTeam(
                 1,
@@ -1317,17 +1351,6 @@ class SystemSixHitApiTest extends TestCase
             [2, 2, 2],
             array_column(array_column($bOnly['pairs'], 'low'), 'stage')
         );
-
-        foreach ($lowC as $roles) {
-            $this->createTeam(
-                1,
-                10,
-                1,
-                $roles,
-                stage: 3,
-                createdAt: $createdAt
-            );
-        }
 
         $cOnly = $this->postJson(self::PREVIOUS_URL, [
             'stage' => 3,
@@ -1353,6 +1376,82 @@ class SystemSixHitApiTest extends TestCase
 
         $this->assertContains('2,2,3', $stagePatterns);
         $this->assertContains('2,3,3', $stagePatterns);
+    }
+
+    public function test_low_stage_without_difficulty_links_remains_eligible(): void
+    {
+        $createdAt = Carbon::parse('2026-10-10 12:00:00');
+        $lowB = [
+            [1 => 1, 2 => 1, 3 => 1],
+            [4 => 1, 5 => 1, 6 => 1],
+            [7 => 1, 8 => 1, 9 => 1],
+        ];
+        $lowC = [
+            [19 => 1, 20 => 1, 21 => 1],
+            [22 => 1, 23 => 1, 24 => 1],
+            [25 => 1, 26 => 1, 27 => 1],
+        ];
+        $high = [
+            [10 => 1, 11 => 1, 12 => 1],
+            [13 => 1, 14 => 1, 15 => 1],
+            [16 => 1, 17 => 1, 18 => 1],
+        ];
+
+        foreach ($lowB as $roles) {
+            $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: 2,
+                createdAt: $createdAt
+            );
+        }
+
+        foreach ($lowC as $roles) {
+            $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: 3,
+                createdAt: $createdAt
+            );
+        }
+
+        foreach ($high as $roles) {
+            $this->createTeam(
+                1,
+                10,
+                1,
+                $roles,
+                stage: 4,
+                createdAt: $createdAt
+            );
+        }
+
+        Sanctum::actingAs($this->guest);
+        $packages = $this->postJson(self::PREVIOUS_URL)
+            ->assertOk()
+            ->json('data');
+        $this->assertNotEmpty($packages);
+        $bOnly = $this->postJson(self::PREVIOUS_URL, ['stage' => 2])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+        $cOnly = $this->postJson(self::PREVIOUS_URL, ['stage' => 3])
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->json('data.0');
+
+        $this->assertSame(
+            [2, 2, 2],
+            array_column(array_column($bOnly['pairs'], 'low'), 'stage')
+        );
+        $this->assertSame(
+            [3, 3, 3],
+            array_column(array_column($cOnly['pairs'], 'low'), 'stage')
+        );
     }
 
     public function test_result_limit_is_ten_and_tie_order_is_stable(): void
@@ -1395,7 +1494,7 @@ class SystemSixHitApiTest extends TestCase
             ->json('data');
 
         $this->assertSame($first, $second);
-        $this->assertDatabaseCount('system_six_hit_result_caches', 1);
+        $this->assertCount(1, $this->sixHitCachePayloads());
     }
 
     /**
@@ -1440,6 +1539,32 @@ class SystemSixHitApiTest extends TestCase
         }
 
         return $teams;
+    }
+
+    /**
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function sixHitCachePayloads(): array
+    {
+        $store = Cache::store()->getStore();
+        $this->assertInstanceOf(\Illuminate\Cache\ArrayStore::class, $store);
+        $property = new \ReflectionProperty($store, 'storage');
+        $property->setAccessible(true);
+        $payloads = [];
+
+        foreach ($property->getValue($store) as $key => $entry) {
+            if (! str_contains((string) $key, 'six-hit:final:v1:')) {
+                continue;
+            }
+
+            $payload = $entry['value'] ?? null;
+
+            if (is_array($payload)) {
+                $payloads[] = $payload;
+            }
+        }
+
+        return array_values($payloads);
     }
 
     /**
@@ -1611,9 +1736,6 @@ class SystemSixHitApiTest extends TestCase
     private function createTestTables(): void
     {
         foreach ([
-            'system_six_hit_result_caches',
-            'system_six_hit_triples',
-            'system_six_hit_cache_sets',
             'team_links',
             'team_roles',
             'teams',
@@ -1716,87 +1838,5 @@ class SystemSixHitApiTest extends TestCase
             $table->timestamps();
         });
 
-        Schema::create('system_six_hit_cache_sets', function (Blueprint $table): void {
-            $table->id();
-            $table->char('year_month', 6);
-            $table->unsignedTinyInteger('mode');
-            $table->unsignedSmallInteger('algorithm_version')->default(1);
-            $table->char('source_signature', 64);
-            $table->unsignedInteger('low_team_count')->default(0);
-            $table->unsignedInteger('high_team_count')->default(0);
-            $table->unsignedInteger('low_triple_count')->default(0);
-            $table->unsignedInteger('high_triple_count')->default(0);
-            $table->timestamp('generated_at')->nullable();
-            $table->timestamps();
-            $table->unique(
-                ['year_month', 'mode', 'source_signature'],
-                'uk_six_cache_period_mode_sig'
-            );
-            $table->index(
-                ['year_month', 'mode', 'id'],
-                'idx_six_cache_period_mode'
-            );
-        });
-
-        Schema::create('system_six_hit_triples', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('cache_set_id');
-            $table->unsignedTinyInteger('side');
-            $table->unsignedInteger('team_1_id');
-            $table->unsignedInteger('team_2_id');
-            $table->unsignedInteger('team_3_id');
-            $table->json('team_ids');
-            $table->unsignedTinyInteger('boss_1');
-            $table->unsignedTinyInteger('boss_2');
-            $table->unsignedTinyInteger('boss_3');
-            $table->unsignedBigInteger('score_tenths');
-            $table->unsignedTinyInteger('stage_2_count')->default(0);
-            $table->unsignedTinyInteger('stage_3_count')->default(0);
-            $table->unsignedTinyInteger('stage_4_count')->default(0);
-            $table->unsignedTinyInteger('atk_positive_count')->default(0);
-            $table->unsignedTinyInteger('atk_nonpositive_count')->default(0);
-            $table->timestamps();
-            $table->unique(
-                ['cache_set_id', 'side', 'team_1_id', 'team_2_id', 'team_3_id'],
-                'uk_six_triple_teams'
-            );
-            $table->index(
-                ['cache_set_id', 'side', 'score_tenths'],
-                'idx_six_triple_score'
-            );
-            $table->index(
-                ['cache_set_id', 'side', 'stage_2_count', 'stage_3_count'],
-                'idx_six_triple_stage'
-            );
-            $table->index(
-                ['cache_set_id', 'side', 'atk_positive_count', 'atk_nonpositive_count'],
-                'idx_six_triple_atk'
-            );
-        });
-
-        Schema::create('system_six_hit_result_caches', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('cache_set_id');
-            $table->unsignedTinyInteger('endpoint');
-            $table->unsignedInteger('uid')->nullable();
-            $table->unsignedBigInteger('account_id')->nullable();
-            $table->char('role_pool_hash', 64)->nullable();
-            $table->char('filter_hash', 64);
-            $table->char('cache_key', 64);
-            $table->json('filters');
-            $table->json('results');
-            $table->unsignedTinyInteger('result_count')->default(0);
-            $table->timestamp('generated_at')->nullable();
-            $table->timestamps();
-            $table->unique('cache_key', 'uk_six_result_cache_key');
-            $table->index(
-                ['cache_set_id', 'endpoint'],
-                'idx_six_result_cache_set'
-            );
-            $table->index(
-                ['endpoint', 'uid', 'account_id'],
-                'idx_six_result_owner'
-            );
-        });
     }
 }

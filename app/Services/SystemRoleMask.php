@@ -4,7 +4,7 @@ namespace App\Services;
 
 use InvalidArgumentException;
 
-final class SystemSixHitRoleMask
+final class SystemRoleMask
 {
     private const CHUNK_BITS = 60;
 

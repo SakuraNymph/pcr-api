@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
@@ -53,12 +54,39 @@ class ImportLegacyTeamsCommandTest extends TestCase
     {
         $this->seedRoles();
         $this->manifestPath = $this->writeManifest($this->records());
+        Cache::put(
+            'system-source:rows:v1:202610:high',
+            ['stub' => true],
+            now()->addHour()
+        );
+        Cache::put(
+            'system-source:rows:v1:202611:low',
+            ['stub' => true],
+            now()->addHour()
+        );
+        Cache::put(
+            'systemTripleTeams:202610',
+            ['stub' => true],
+            now()->addHour()
+        );
+        Cache::put(
+            'systemTripleTeamsMakeTeams:202611',
+            ['stub' => true],
+            now()->addHour()
+        );
 
         $this->artisan('game:import-legacy-teams', [
             '--file' => $this->manifestPath,
             '--copy-month' => '2026-11',
             '--execute' => true,
         ])->assertExitCode(0);
+
+        $this->assertFalse(Cache::has('system-source:rows:v1:202610:high'));
+        $this->assertFalse(Cache::has('system-source:rows:v1:202611:low'));
+        $this->assertFalse(Cache::has('systemTripleTeams:202610'));
+        $this->assertFalse(
+            Cache::has('systemTripleTeamsMakeTeams:202611')
+        );
 
         $this->assertDatabaseCount('teams', 6);
         $this->assertDatabaseCount('team_roles', 12);

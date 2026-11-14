@@ -8,8 +8,10 @@ use App\Models\Team;
 use App\Models\TeamLink;
 use App\Models\TeamRole;
 use App\Models\User;
+use App\Services\SystemTeamSourceService;
 use App\Services\SystemTriplePlanner;
 use App\Services\SystemTripleService;
+use App\Services\TeamService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -1124,6 +1126,7 @@ class SystemTripleApiTest extends TestCase
             ->where('team_id', $first->id)
             ->where('role_id', 1)
             ->update(['status' => 0]);
+        app(SystemTeamSourceService::class)->forgetMonth('202609');
         Carbon::setTestNow(Carbon::now()->addSecond());
         $this->postJson(self::PREVIOUS_MONTH_URL)
             ->assertOk()
@@ -1149,6 +1152,7 @@ class SystemTripleApiTest extends TestCase
             createdAt: Carbon::parse('2026-09-04 12:00:00')
         );
         $this->createLink($newTeam, 1);
+        app(SystemTeamSourceService::class)->forgetMonth('202609');
         Carbon::setTestNow(Carbon::now()->addSecond());
         $this->postJson(self::PREVIOUS_MONTH_URL)->assertOk();
         $sourceAfterTeamChange = $this->formalSourceCache('202609');
@@ -1486,7 +1490,7 @@ class SystemTripleApiTest extends TestCase
         $this->assertSame($signatureBefore, $sourceHit['signature']);
         $this->assertSame($generatedAtBefore, $makeHit['generated_at']);
 
-        $activeLink->update(['status' => 0]);
+        app(TeamService::class)->setLinkStatus($activeLink, 0);
         Carbon::setTestNow(Carbon::now()->addSecond());
 
         $this->postJson(self::URL)
@@ -1506,6 +1510,7 @@ class SystemTripleApiTest extends TestCase
             ->where('team_id', $third->id)
             ->where('role_id', 1)
             ->update(['status' => 0]);
+        app(SystemTeamSourceService::class)->forgetMonth('202610');
         Carbon::setTestNow(Carbon::now()->addSecond());
 
         $this->postJson(self::URL)
@@ -1536,7 +1541,7 @@ class SystemTripleApiTest extends TestCase
         $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
         $sourceBefore = $this->formalSourceCache();
 
-        $first->update(['status' => 0]);
+        app(TeamService::class)->setStatus($first, 0);
         $replacement = $this->createTeam(
             4,
             100,
@@ -1890,7 +1895,7 @@ class SystemTripleApiTest extends TestCase
         );
     }
 
-    public function test_formal_cache_hit_uses_three_source_queries_and_no_result_writes(): void
+    public function test_source_rows_are_cached_and_hit_does_not_query_source_tables(): void
     {
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
@@ -1911,23 +1916,57 @@ class SystemTripleApiTest extends TestCase
         DB::enableQueryLog();
         DB::flushQueryLog();
         $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
-        $coldQueries = count(DB::getQueryLog());
+        $coldQueries = $this->countSourceTableQueries(DB::getQueryLog());
 
         DB::flushQueryLog();
         $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
-        $hitQueries = count(DB::getQueryLog());
+        $hitQueries = $this->countSourceTableQueries(DB::getQueryLog());
 
         DB::flushQueryLog();
         $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonCount(1, 'data');
-        $accountQueries = count(DB::getQueryLog());
+        $accountQueries = $this->countSourceTableQueries(DB::getQueryLog());
 
-        $this->assertSame(6, $coldQueries);
-        $this->assertSame(3, $hitQueries);
-        $this->assertSame(5, $accountQueries);
+        $this->assertSame(3, $coldQueries);
+        $this->assertSame(0, $hitQueries);
+        $this->assertSame(0, $accountQueries);
+        $this->assertTrue(Cache::has('system-source:rows:v1:202610:high'));
         $this->assertDatabaseCount('system_triple_account_caches', 0);
         DB::disableQueryLog();
+    }
+
+    public function test_source_row_cache_expires_after_one_hour(): void
+    {
+        $teams = [
+            $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
+            $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
+            $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]),
+        ];
+
+        foreach ($teams as $team) {
+            $this->createLink($team, 1);
+        }
+
+        Sanctum::actingAs($this->user);
+        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+
+        $cacheKey = 'system-source:rows:v1:202610:high';
+        $generatedAt = Cache::get($cacheKey)['generated_at'];
+
+        Carbon::setTestNow(Carbon::now()->addSeconds(3599));
+        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->assertSame(
+            $generatedAt,
+            Cache::get($cacheKey)['generated_at']
+        );
+
+        Carbon::setTestNow(Carbon::now()->addSeconds(2));
+        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->assertNotSame(
+            $generatedAt,
+            Cache::get($cacheKey)['generated_at']
+        );
     }
 
     public function test_source_change_rebuilds_all_five_groups_together(): void
@@ -1959,7 +1998,7 @@ class SystemTripleApiTest extends TestCase
             $this->assertCount(1, $before['groups'][$difficulty]);
         }
 
-        $eyeLink->update(['status' => 0]);
+        app(TeamService::class)->setLinkStatus($eyeLink, 0);
         Carbon::setTestNow(Carbon::now()->addSecond());
 
         $this->postJson(self::URL, ['difficulty' => 1])
@@ -2068,6 +2107,24 @@ class SystemTripleApiTest extends TestCase
         $this->assertIsArray($payload);
 
         return $payload;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $queries
+     */
+    private function countSourceTableQueries(array $queries): int
+    {
+        $count = 0;
+
+        foreach ($queries as $query) {
+            $sql = (string) ($query['query'] ?? '');
+
+            if (preg_match('/\b(teams|team_roles|team_links)\b/', $sql) === 1) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**

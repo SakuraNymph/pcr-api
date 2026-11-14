@@ -26,6 +26,7 @@ class UserTripleController extends Controller
 
         [
             $difficulty,
+            $mode,
             $bossMap,
             $atkType,
             $lockedIds,
@@ -38,7 +39,8 @@ class UserTripleController extends Controller
             $bossMap,
             $atkType,
             $lockedIds,
-            $hiddenIds
+            $hiddenIds,
+            $mode
         );
 
         return $this->success($data, '获取用户三刀组合成功');
@@ -47,10 +49,11 @@ class UserTripleController extends Controller
     /**
      * @return array{
      *     0: int,
-     *     1: array<int, int>,
-     *     2: int,
-     *     3: array<int, int>,
-     *     4: array<int, int>
+     *     1: int,
+     *     2: array<int, int>,
+     *     3: int,
+     *     4: array<int, int>,
+     *     5: array<int, int>
      * }
      */
     private function validatedFilters(Request $request): array
@@ -60,6 +63,7 @@ class UserTripleController extends Controller
             'row2' => ['nullable', 'integer'],
             'row3' => ['nullable', 'integer'],
             'difficulty' => ['nullable', 'integer', 'between:0,5'],
+            'mode' => ['nullable', 'integer', 'between:0,2'],
             'atk' => ['nullable', 'integer', 'between:0,4'],
             'lockedIds' => ['nullable', 'array'],
             'lockedIds.*' => ['integer'],
@@ -87,6 +91,7 @@ class UserTripleController extends Controller
 
         return [
             (int) ($validated['difficulty'] ?? 0),
+            (int) ($validated['mode'] ?? 0),
             $bossMap,
             (int) ($validated['atk'] ?? 0),
             $lockedIds,

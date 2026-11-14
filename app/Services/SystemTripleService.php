@@ -3,15 +3,10 @@
 namespace App\Services;
 
 use App\Models\Team;
-use App\Models\TeamLink;
-use App\Models\TeamRole;
 use App\Models\UserRolePool;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use LogicException;
 
@@ -20,8 +15,6 @@ class SystemTripleService
     private const STAGE = 4;
 
     private const RESULT_LIMIT = 10;
-
-    private const CACHE_VERSION = 2;
 
     private const MULTIPLIER_RATES = [0, 4.5, 4.5, 4.7, 4.8, 5];
 
@@ -36,7 +29,11 @@ class SystemTripleService
     private const FORMAL_CACHE_LOCK_WAIT_SECONDS = 15;
 
     public function __construct(
-        private readonly SystemTriplePlanner $planner
+        private readonly SystemTriplePlanner $planner,
+        private readonly SystemTeamContextService $teamContext,
+        private readonly SystemTeamSourceService $teamSource,
+        private readonly SystemHitFilters $hitFilters,
+        private readonly SystemTeamPresenter $teamPresenter
     ) {}
 
     /**
@@ -54,7 +51,7 @@ class SystemTripleService
         bool $previousMonth = false
     ): array {
         return $this->getPublicGroups(
-            $this->resolveYearMonth($previousMonth),
+            $this->teamContext->monthRange($previousMonth)[2],
             $difficulty,
             $bossMap,
             $atkType,
@@ -93,7 +90,9 @@ class SystemTripleService
         }
 
         $difficulty = $this->normalizeDifficulty($difficulty);
-        $context = $this->loadPublicContext(now()->format('Ym'));
+        $context = $this->loadPublicContext(
+            $this->teamContext->monthRange(false)[2]
+        );
         $snapshots = $context['snapshots'];
         $combinations = $context['combinations'];
         $roleIds = $this->normalizeRoleIds($pool->roles ?? []);
@@ -171,21 +170,7 @@ class SystemTripleService
         Collection $teams,
         array $stages
     ): array {
-        $normalizedStages = array_values(array_unique(array_map(
-            static fn (mixed $stage): int => (int) $stage,
-            $stages
-        )));
-        $filtered = $teams
-            ->filter(
-                static fn (Team $team): bool => in_array(
-                    (int) $team->stage,
-                    $normalizedStages,
-                    true
-                )
-            )
-            ->values();
-
-        return $this->makeCacheState($filtered);
+        return $this->teamContext->buildSnapshotState($teams, $stages);
     }
 
     /**
@@ -240,20 +225,30 @@ class SystemTripleService
         array $bossMap = [],
         int $atkType = 0,
         array $lockedIds = [],
-        array $hiddenIds = []
+        array $hiddenIds = [],
+        int $mode = 0
     ): array {
-        $startOfMonth = now()->startOfMonth();
-        $startOfNextMonth = $startOfMonth
-            ->copy()
-            ->addMonthNoOverflow()
-            ->startOfMonth();
-
-        $teams = $this->queryUserTeams(
+        [$startOfMonth, $startOfNextMonth] = $this->teamContext->monthRange(
+            false
+        );
+        $teams = $this->teamContext->queryTeams(
             $uid,
+            [self::STAGE],
             $startOfMonth,
             $startOfNextMonth
         );
-        $sourceLinksByTeamId = $this->queryUserSourceLinks($teams);
+
+        if ($mode > 0) {
+            $teams = $teams
+                ->filter(
+                    static fn (Team $team): bool => (int) $team->mode === $mode
+                )
+                ->values();
+        }
+
+        $sourceLinksByTeamId = $this->teamContext->queryUserSourceLinks(
+            $teams
+        );
 
         $snapshots = $teams
             ->mapWithKeys(function (Team $team) use ($sourceLinksByTeamId): array {
@@ -265,7 +260,10 @@ class SystemTripleService
                     );
 
                 return [
-                    (int) $team->id => $this->makeSnapshot($team, $links),
+                    (int) $team->id => $this->teamContext->makeSnapshot(
+                        $team,
+                        $links
+                    ),
                 ];
             })
             ->all();
@@ -273,7 +271,7 @@ class SystemTripleService
         if ($difficulty > 0) {
             $snapshots = array_filter(
                 $snapshots,
-                fn (array $snapshot): bool => $this->snapshotHasDifficulty(
+                fn (array $snapshot): bool => $this->teamContext->snapshotHasDifficulty(
                     $snapshot,
                     $difficulty
                 )
@@ -318,8 +316,8 @@ class SystemTripleService
         $sourceKey = $this->sourceCacheKey($yearMonth);
         $makeTeamsKey = $this->makeTeamsCacheKey($yearMonth);
         $lockKey = $this->lockCacheKey($yearMonth);
-        $rows = $this->queryFormalSourceRows($yearMonth);
-        $signature = $this->formalSourceSignature($rows);
+        $rows = $this->teamSource->highRows($yearMonth);
+        $signature = $this->teamContext->formalSourceSignature($rows);
         $source = $this->decodeFormalSourcePayload(
             Cache::get($sourceKey),
             $yearMonth,
@@ -371,7 +369,7 @@ class SystemTripleService
                     );
                 }
 
-                $snapshots = $this->buildFormalSnapshots($rows);
+                $snapshots = $this->teamContext->buildFormalSnapshots($rows);
                 $built = $this->planner->build(array_values($snapshots));
 
                 return $this->formalContext(
@@ -382,8 +380,8 @@ class SystemTripleService
                 );
             }
 
-            $rows = $this->queryFormalSourceRows($yearMonth);
-            $signature = $this->formalSourceSignature($rows);
+            $rows = $this->teamSource->highRows($yearMonth);
+            $signature = $this->teamContext->formalSourceSignature($rows);
             $source = $this->decodeFormalSourcePayload(
                 Cache::get($sourceKey),
                 $yearMonth,
@@ -404,7 +402,8 @@ class SystemTripleService
                 );
             }
 
-            $snapshots = $source ?? $this->buildFormalSnapshots($rows);
+            $snapshots = $source
+                ?? $this->teamContext->buildFormalSnapshots($rows);
             $built = $this->planner->build(array_values($snapshots));
             $makePayload = $this->planner->buildFormalPayload(
                 $built,
@@ -479,239 +478,6 @@ class SystemTripleService
     }
 
     /**
-     * @return array{
-     *     teams: array<int, array<string, mixed>>,
-     *     roles: array<int, array<int, array<string, int>>>,
-     *     role_meta: array<int, array{image_id: int|null}>,
-     *     links: array<int, array<int, array<string, mixed>>>
-     * }
-     */
-    private function queryFormalSourceRows(string $yearMonth): array
-    {
-        $startOfMonth = $this->monthStart($yearMonth);
-        $startOfNextMonth = $startOfMonth
-            ->copy()
-            ->addMonthNoOverflow()
-            ->startOfMonth();
-        $teamRows = DB::table('teams')
-            ->where('uid', 0)
-            ->where('stage', self::STAGE)
-            ->where('status', 1)
-            ->where('created_at', '>=', $startOfMonth)
-            ->where('created_at', '<', $startOfNextMonth)
-            ->orderBy('id')
-            ->get([
-                'id',
-                'stage',
-                'status',
-                'boss',
-                'damage',
-                'atk_value',
-                'remark',
-                'updated_at',
-            ]);
-        $teams = [];
-
-        foreach ($teamRows as $row) {
-            $teams[(int) $row->id] = [
-                'id' => (int) $row->id,
-                'stage' => (int) $row->stage,
-                'status' => (int) $row->status,
-                'boss' => (int) $row->boss,
-                'damage' => (int) $row->damage,
-                'atk_value' => (int) $row->atk_value,
-                'remark' => (string) ($row->remark ?? ''),
-                'updated_at' => $row->updated_at === null
-                    ? null
-                    : (string) $row->updated_at,
-            ];
-        }
-
-        if ($teams === []) {
-            return [
-                'teams' => [],
-                'roles' => [],
-                'role_meta' => [],
-                'links' => [],
-            ];
-        }
-
-        $teamIds = array_keys($teams);
-        $roles = [];
-        $roleMeta = [];
-        $roleRows = DB::table('team_roles as team_role')
-            ->leftJoin(
-                'game_roles as game_role',
-                'game_role.id',
-                '=',
-                'team_role.role_id'
-            )
-            ->whereIn('team_role.team_id', $teamIds)
-            ->orderBy('team_role.id')
-            ->get([
-                'team_role.team_id',
-                'team_role.role_id',
-                'team_role.status',
-                'game_role.role_id_3',
-                'game_role.role_id_6',
-            ]);
-
-        foreach ($roleRows as $row) {
-            $teamId = (int) $row->team_id;
-            $roleId = (int) $row->role_id;
-
-            if ($roleId <= 0) {
-                continue;
-            }
-
-            $roles[$teamId][] = [
-                'role_id' => $roleId,
-                'status' => (int) $row->status,
-            ];
-            $imageId = (int) ($row->role_id_6 ?? $row->role_id_3 ?? 0);
-            $roleMeta[$roleId] = [
-                'image_id' => $imageId > 0 ? $imageId : null,
-            ];
-        }
-
-        $links = [];
-        $linkRows = DB::table('team_links')
-            ->whereIn('team_id', $teamIds)
-            ->where('status', 1)
-            ->orderByDesc('damage')
-            ->orderBy('id')
-            ->get([
-                'id',
-                'team_id',
-                'url',
-                'author',
-                'difficulty',
-                'damage',
-                'note',
-                'status',
-            ]);
-
-        foreach ($linkRows as $row) {
-            $links[(int) $row->team_id][] = [
-                'id' => (int) $row->id,
-                'url' => $row->url,
-                'author' => $row->author,
-                'difficulty' => (int) $row->difficulty,
-                'damage' => (int) $row->damage,
-                'note' => $row->note,
-                'status' => (int) $row->status,
-            ];
-        }
-
-        return [
-            'teams' => $teams,
-            'roles' => $roles,
-            'role_meta' => $roleMeta,
-            'links' => $links,
-        ];
-    }
-
-    /**
-     * @param  array{
-     *     teams: array<int, array<string, mixed>>,
-     *     roles: array<int, array<int, array<string, int>>>,
-     *     role_meta: array<int, array{image_id: int|null}>,
-     *     links: array<int, array<int, array<string, mixed>>>
-     * }  $rows
-     */
-    private function formalSourceSignature(array $rows): string
-    {
-        $teams = [];
-
-        foreach ($rows['teams'] as $teamId => $team) {
-            $roleData = [];
-
-            foreach (($rows['roles'][$teamId] ?? []) as $role) {
-                $roleId = (int) $role['role_id'];
-                $roleData[] = [
-                    $roleId,
-                    (int) $role['status'],
-                    $rows['role_meta'][$roleId]['image_id'] ?? null,
-                ];
-            }
-
-            $teams[] = [
-                'id' => (int) $teamId,
-                'stage' => (int) $team['stage'],
-                'status' => (int) $team['status'],
-                'boss' => (int) $team['boss'],
-                'damage' => (int) $team['damage'],
-                'atk_value' => (int) $team['atk_value'],
-                'remark' => (string) $team['remark'],
-                'updated_at' => $team['updated_at'],
-                'roles' => $roleData,
-                'links' => $rows['links'][$teamId] ?? [],
-            ];
-        }
-
-        return hash('sha256', json_encode([
-            'algorithm_version' => SystemTriplePlanner::CACHE_VERSION,
-            'teams' => $teams,
-        ], JSON_THROW_ON_ERROR));
-    }
-
-    /**
-     * @param  array{
-     *     teams: array<int, array<string, mixed>>,
-     *     roles: array<int, array<int, array<string, int>>>,
-     *     role_meta: array<int, array{image_id: int|null}>,
-     *     links: array<int, array<int, array<string, mixed>>>
-     * }  $rows
-     * @return array<int, array<string, mixed>>
-     */
-    private function buildFormalSnapshots(array $rows): array
-    {
-        $snapshots = [];
-
-        foreach ($rows['teams'] as $teamId => $team) {
-            $roles = [];
-            $roleDetails = [];
-            $activeRoles = [];
-            $inactiveCount = 0;
-
-            foreach (($rows['roles'][$teamId] ?? []) as $role) {
-                $roleId = (int) $role['role_id'];
-                $status = (int) $role['status'];
-                $roles[$roleId] = $status;
-
-                if ($status === 0) {
-                    $inactiveCount++;
-                } else {
-                    $activeRoles[$roleId] = true;
-                }
-
-                $roleDetails[$roleId] = [
-                    'image_id' => $rows['role_meta'][$roleId]['image_id'] ?? null,
-                    'image_url' => null,
-                ];
-            }
-
-            $snapshots[(int) $teamId] = [
-                'id' => (int) $teamId,
-                'stage' => (int) $team['stage'],
-                'status' => (int) $team['status'],
-                'boss' => (int) $team['boss'],
-                'damage' => (int) $team['damage'],
-                'atk_value' => (int) $team['atk_value'],
-                'remark' => (string) $team['remark'],
-                'updated_at' => $team['updated_at'],
-                'roles' => $roles,
-                'role_details' => $roleDetails,
-                'active_roles' => $activeRoles,
-                'inactive_count' => $inactiveCount,
-                'links' => $rows['links'][$teamId] ?? [],
-            ];
-        }
-
-        return $snapshots;
-    }
-
-    /**
      * @param  array<int, array<string, mixed>>  $snapshots
      * @return array<string, mixed>
      */
@@ -773,26 +539,6 @@ class SystemTripleService
         return in_array($difficulty, [1, 2, 3, 4, 5], true)
             ? $difficulty
             : 1;
-    }
-
-    private function resolveYearMonth(bool $previousMonth): string
-    {
-        $month = $previousMonth
-            ? now()->subMonthNoOverflow()->startOfMonth()
-            : now()->startOfMonth();
-
-        return $month->format('Ym');
-    }
-
-    private function monthStart(string $yearMonth): Carbon
-    {
-        return now()
-            ->setDate(
-                (int) substr($yearMonth, 0, 4),
-                (int) substr($yearMonth, 4, 2),
-                1
-            )
-            ->startOfDay();
     }
 
     private function sourceCacheKey(string $yearMonth): string
@@ -880,276 +626,7 @@ class SystemTripleService
      */
     private function normalizeTeamIds(iterable $teamIds): array
     {
-        return $this->normalizeRoleIds($teamIds);
-    }
-
-    /**
-     * 查询当前用户本月有效 D 阶段作业。
-     */
-    private function queryUserTeams(
-        int $uid,
-        Carbon $startOfMonth,
-        Carbon $startOfNextMonth
-    ): Collection {
-        return Team::query()
-            ->where('uid', $uid)
-            ->where('stage', self::STAGE)
-            ->where('status', 1)
-            ->where('created_at', '>=', $startOfMonth)
-            ->where('created_at', '<', $startOfNextMonth)
-            ->with([
-                'teamRoles' => function ($query): void {
-                    $query
-                        ->orderBy('id')
-                        ->with('role');
-                },
-                'links' => function ($query): void {
-                    $query
-                        ->where('status', 1)
-                        ->orderByDesc('damage')
-                        ->orderBy('id');
-                },
-            ])
-            ->orderBy('id')
-            ->get();
-    }
-
-    /**
-     * 按作业可见链接中的难度筛选作业。
-     */
-    public function filterTeamsByDifficulty(
-        Collection $teams,
-        int $difficulty
-    ): Collection {
-        if ($difficulty <= 0) {
-            return $teams;
-        }
-
-        return $teams
-            ->filter(
-                fn (Team $team): bool => $this->teamHasDifficulty(
-                    $team,
-                    $difficulty
-                )
-            )
-            ->values();
-    }
-
-    /**
-     * 判断作业是否包含指定难度的可见链接。
-     */
-    public function teamHasDifficulty(Team $team, int $difficulty): bool
-    {
-        return $difficulty <= 0
-            || $this->linksContainDifficulty($team->links, $difficulty);
-    }
-
-    /**
-     * @param  iterable<int, TeamLink>  $links
-     */
-    private function linksContainDifficulty(
-        iterable $links,
-        int $difficulty
-    ): bool {
-        foreach ($links as $link) {
-            if ((int) $link->difficulty === $difficulty) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param  array<string, mixed>  $snapshot
-     */
-    private function snapshotHasDifficulty(
-        array $snapshot,
-        int $difficulty
-    ): bool {
-        foreach ($snapshot['links'] as $link) {
-            if ((int) ($link['difficulty'] ?? 0) === $difficulty) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * 批量读取复制作业的来源系统作业链接。
-     *
-     * 来源系统作业是否启用、来源链接是否启用都不影响读取。
-     */
-    private function queryUserSourceLinks(Collection $teams): SupportCollection
-    {
-        $sourceTeamIds = $teams
-            ->pluck('source_team_id')
-            ->filter(static fn ($id): bool => $id !== null)
-            ->map(static fn ($id): int => (int) $id)
-            ->unique()
-            ->values();
-
-        if ($sourceTeamIds->isEmpty()) {
-            return collect();
-        }
-
-        $existingSourceIds = Team::query()
-            ->whereIn('id', $sourceTeamIds)
-            ->where('uid', 0)
-            ->pluck('id')
-            ->map(static fn ($id): int => (int) $id)
-            ->values();
-
-        if ($existingSourceIds->isEmpty()) {
-            return collect();
-        }
-
-        return TeamLink::query()
-            ->whereIn('team_id', $existingSourceIds)
-            ->orderByDesc('damage')
-            ->orderBy('id')
-            ->get()
-            ->groupBy(static fn (TeamLink $link): int => (int) $link->team_id);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function makeSnapshot(
-        Team $team,
-        ?iterable $links = null
-    ): array {
-        $roles = [];
-        $roleDetails = [];
-        $activeRoles = [];
-        $inactiveCount = 0;
-
-        /** @var TeamRole $teamRole */
-        foreach ($team->teamRoles as $teamRole) {
-            $roleId = (int) $teamRole->role_id;
-
-            if ($roleId <= 0) {
-                continue;
-            }
-
-            $status = (int) $teamRole->status;
-            $roles[$roleId] = $status;
-
-            if ($status === 0) {
-                $inactiveCount++;
-            } else {
-                $activeRoles[$roleId] = true;
-            }
-
-            $role = $teamRole->role;
-            $imageId = $role?->role_id_6 ?? $role?->role_id_3;
-
-            $roleDetails[$roleId] = [
-                'image_id' => $imageId ? (int) $imageId : null,
-                'image_url' => $imageId ? url("images/roles/{$imageId}.webp") : null,
-            ];
-        }
-
-        return [
-            'id' => (int) $team->id,
-            'stage' => (int) $team->stage,
-            'status' => (int) $team->status,
-            'mode' => (int) $team->mode,
-            'boss' => (int) $team->boss,
-            'damage' => (int) $team->damage,
-            'atk_value' => (int) $team->atk_value,
-            'remark' => (string) ($team->remark ?? ''),
-            'updated_at' => $team->updated_at?->format('Y-m-d H:i:s.u'),
-            'roles' => $roles,
-            'role_details' => $roleDetails,
-            'active_roles' => $activeRoles,
-            'inactive_count' => $inactiveCount,
-            'links' => $this->formatLinks($links ?? $team->links),
-        ];
-    }
-
-    /**
-     * @param  iterable<int, TeamLink>  $links
-     * @return array<int, array<string, mixed>>
-     */
-    private function formatLinks(iterable $links): array
-    {
-        $result = [];
-
-        foreach ($links as $link) {
-            $result[] = [
-                'id' => (int) $link->id,
-                'url' => $link->url,
-                'author' => $link->author,
-                'difficulty' => (int) $link->difficulty,
-                'damage' => (int) $link->damage,
-                'note' => $link->note,
-                'status' => (int) $link->status,
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $snapshots
-     */
-    private function signature(array $snapshots): string
-    {
-        $data = [];
-
-        foreach ($snapshots as $snapshot) {
-            $roles = [];
-
-            foreach ($snapshot['roles'] as $roleId => $status) {
-                $roles[] = [(int) $roleId, (int) $status];
-            }
-
-            $data[] = [
-                'id' => $snapshot['id'],
-                'stage' => $snapshot['stage'],
-                'status' => $snapshot['status'],
-                'mode' => $snapshot['mode'],
-                'boss' => $snapshot['boss'],
-                'damage' => $snapshot['damage'],
-                'atk_value' => $snapshot['atk_value'],
-                'updated_at' => $snapshot['updated_at'],
-                'roles' => $roles,
-            ];
-        }
-
-        return hash('sha256', json_encode([
-            'algorithm_version' => self::CACHE_VERSION,
-            'teams' => $data,
-        ], JSON_THROW_ON_ERROR));
-    }
-
-    /**
-     * @return array{
-     *     snapshots: array<int, array<string, mixed>>,
-     *     team_ids: string,
-     *     team_count: int,
-     *     signature: string
-     * }
-     */
-    private function makeCacheState(Collection $teams): array
-    {
-        $snapshots = $teams
-            ->mapWithKeys(fn (Team $team): array => [
-                (int) $team->id => $this->makeSnapshot($team),
-            ])
-            ->all();
-        $teamIds = array_keys($snapshots);
-
-        sort($teamIds, SORT_NUMERIC);
-
-        return [
-            'snapshots' => $snapshots,
-            'team_ids' => implode(',', $teamIds),
-            'team_count' => count($teamIds),
-            'signature' => $this->signature($snapshots),
-        ];
+        return $this->hitFilters->normalizeTeamIds($teamIds);
     }
 
     /**
@@ -1357,11 +834,7 @@ class SystemTripleService
         array $lockedIds,
         array $hiddenIds
     ): array {
-        $selectedBosses = array_values(array_filter(
-            $bossMap,
-            static fn (int $boss): bool => $boss > 0
-        ));
-        sort($selectedBosses);
+        $selectedBosses = $this->hitFilters->normalizeBosses($bossMap);
 
         $result = [];
 
@@ -1394,11 +867,18 @@ class SystemTripleService
                 }
             }
 
-            if (! $this->passesAttackFilter($atkType, $physicalCount, $magicCount)) {
+            if (! $this->hitFilters->passesAttackFilter(
+                $atkType,
+                $physicalCount,
+                $magicCount
+            )) {
                 continue;
             }
 
-            if (! $this->passesBossFilter($comboBosses, $selectedBosses)) {
+            if (! $this->hitFilters->passesBossFilter(
+                $comboBosses,
+                $selectedBosses
+            )) {
                 continue;
             }
 
@@ -1410,50 +890,6 @@ class SystemTripleService
         }
 
         return $result;
-    }
-
-    private function passesAttackFilter(
-        int $atkType,
-        int $physicalCount,
-        int $magicCount
-    ): bool {
-        return match ($atkType) {
-            0 => true,
-            1 => $physicalCount === 3,
-            2 => $physicalCount === 2 && $magicCount === 1,
-            3 => $physicalCount === 1 && $magicCount === 2,
-            4 => $magicCount === 3,
-            default => false,
-        };
-    }
-
-    /**
-     * @param  array<int, int>  $comboBosses
-     * @param  array<int, int>  $selectedBosses
-     */
-    private function passesBossFilter(
-        array $comboBosses,
-        array $selectedBosses
-    ): bool {
-        $selectedCount = count($selectedBosses);
-
-        if ($selectedCount === 0) {
-            return true;
-        }
-
-        if ($selectedCount === 1) {
-            return count(array_intersect($selectedBosses, $comboBosses)) > 0;
-        }
-
-        if ($selectedCount === 2) {
-            if (count(array_unique($selectedBosses)) === 1) {
-                return count(array_intersect($comboBosses, $selectedBosses)) >= 2;
-            }
-
-            return count(array_intersect($selectedBosses, $comboBosses)) === 2;
-        }
-
-        return $comboBosses === $selectedBosses;
     }
 
     /**
@@ -1473,49 +909,12 @@ class SystemTripleService
         $borrows ??= $strictBorrowRules
             ? $this->assignStrictBorrow($teamIds, $snapshots)
             : $this->assignBorrow($teamIds, $snapshots);
-        $result = [];
-
-        foreach ($teamIds as $teamId) {
-            $team = $snapshots[$teamId];
-            $roles = [];
-
-            foreach ($team['roles'] as $roleId => $status) {
-                $details = $team['role_details'][$roleId];
-                $displayStatus = (int) $status;
-                $imageId = $details['image_id'] ?? null;
-                $imageUrl = $details['image_url'] ?? null;
-
-                if ($accountRoles !== null) {
-                    $displayStatus = $displayStatus === 1
-                        && isset($accountRoles[(int) $roleId])
-                            ? 1
-                            : 0;
-                }
-
-                $roles[] = [
-                    'image_id' => $imageId,
-                    'image_url' => $imageUrl ?? (
-                        $imageId ? url("images/roles/{$imageId}.webp") : null
-                    ),
-                    'role_id' => (int) $roleId,
-                    'status' => $displayStatus,
-                ];
-            }
-
-            $result[] = [
-                'id' => (int) $teamId,
-                'boss' => $team['boss'],
-                'damage' => $team['damage'],
-                'atk_value' => $team['atk_value'],
-                'roles' => $roles,
-                'borrow' => (int) ($borrows[$teamId] ?? 0),
-                'remark' => $team['remark'],
-                'stage' => $team['stage'],
-                'link' => $team['links'],
-            ];
-        }
-
-        return $result;
+        return $this->teamPresenter->presentTeams(
+            $teamIds,
+            $snapshots,
+            $borrows,
+            $accountRoles
+        );
     }
 
     /**

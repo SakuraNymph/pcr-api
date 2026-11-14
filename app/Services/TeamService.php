@@ -23,6 +23,10 @@ class TeamService
         3 => [0, 7000, 8000, 9000, 10000, 12000],
     ];
 
+    public function __construct(
+        private readonly SystemTeamSourceService $teamSource
+    ) {}
+
     /**
      * Return one row per source link, with the owning team and its roles.
      *
@@ -151,10 +155,10 @@ class TeamService
     /** Create one team and source link per boss; reuse visible admin teams by signature. */
     public function createBatch(array $data): int
     {
-        return DB::transaction(function () use ($data): int {
+        $monthStart = now()->startOfMonth();
+        $linkCount = DB::transaction(function () use ($data, $monthStart): int {
             $linkCount = 0;
             $processedRoleUsageKeys = [];
-            $monthStart = now()->startOfMonth();
             $nextMonthStart = $monthStart->copy()->addMonthNoOverflow();
             $yearMonth = $monthStart->format('Y-m');
 
@@ -247,6 +251,12 @@ class TeamService
 
             return $linkCount;
         }, 3);
+
+        DB::afterCommit(function () use ($monthStart): void {
+            $this->teamSource->forgetMonth($monthStart->format('Ym'));
+        });
+
+        return $linkCount;
     }
 
     private function recordRoleUsage(
@@ -293,10 +303,116 @@ class TeamService
         }
     }
 
+    /**
+     * 修改单条作业：共享字段、角色集合与最低 id 的主来源链接。
+     */
+    public function update(Team $team, array $data): void
+    {
+        $yearMonth = null;
+
+        DB::transaction(function () use (
+            $team,
+            $data,
+            &$yearMonth
+        ): void {
+            $locked = Team::query()
+                ->whereKey($team->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $yearMonth = $locked->created_at?->format('Ym');
+            $roles = $this->orderedRoles($data['roles']);
+            $stage = (int) $data['stage'];
+            $boss = (int) $data['boss'];
+            $difficulty = (int) $data['difficulty'];
+            $damage = $this->damageFor(
+                $stage,
+                $boss,
+                $data['damage'] ?? null,
+            );
+
+            $locked->update([
+                'stage' => $stage,
+                'boss' => $boss,
+                'damage' => $damage,
+                'team_key' => $roles->pluck('id')->implode(','),
+                'mode' => $this->modeForDifficulty($difficulty),
+                'atk_value' => (int) $roles->sum('atk_type'),
+            ]);
+
+            $this->syncRoles($locked, $roles);
+
+            $linkData = [
+                'author' => trim($data['author']),
+                'url' => $data['link'],
+                'difficulty' => $difficulty,
+                'damage' => $damage,
+            ];
+            $primaryLink = $locked->links()
+                ->orderBy('id')
+                ->first();
+
+            if ($primaryLink !== null) {
+                $primaryLink->update($linkData);
+            } else {
+                $locked->links()->create($linkData + ['status' => 1]);
+            }
+
+            $locked->update([
+                'damage' => (int) (
+                    $locked->links()->max('damage') ?? $damage
+                ),
+            ]);
+        });
+
+        if ($yearMonth !== null) {
+            DB::afterCommit(function () use ($yearMonth): void {
+                $this->teamSource->forgetMonth($yearMonth);
+            });
+        }
+    }
+
+    private function syncRoles(Team $team, Collection $roles): void
+    {
+        $existing = TeamRole::query()
+            ->where('team_id', $team->id)
+            ->pluck('status', 'role_id');
+        $existingRoleIds = $existing
+            ->keys()
+            ->map(static fn (mixed $roleId): int => (int) $roleId)
+            ->all();
+        $desiredRoleIds = $roles
+            ->pluck('id')
+            ->map(static fn (mixed $roleId): int => (int) $roleId)
+            ->all();
+        $removedRoleIds = array_values(array_diff(
+            $existingRoleIds,
+            $desiredRoleIds
+        ));
+
+        if ($removedRoleIds !== []) {
+            TeamRole::query()
+                ->where('team_id', $team->id)
+                ->whereIn('role_id', $removedRoleIds)
+                ->delete();
+        }
+
+        foreach ($roles as $role) {
+            if ($existing->has($role->id)) {
+                continue;
+            }
+
+            TeamRole::create([
+                'team_id' => $team->id,
+                'role_id' => $role->id,
+                'status' => 1,
+            ]);
+        }
+    }
+
     /** Update only the selected source link and keep team fields shared/read-only. */
     public function updateLink(Team $team, TeamLink $link, array $data): array
     {
-        return DB::transaction(function () use ($team, $link, $data): array {
+        $result = DB::transaction(function () use ($team, $link, $data): array {
             $damage = $this->damageFor(
                 (int) $team->stage,
                 (int) $team->boss,
@@ -316,11 +432,21 @@ class TeamService
 
             return $this->presentLink($link->fresh(['team.teamRoles.role']));
         });
+
+        $this->invalidateTeamMonth($team);
+
+        return $result;
     }
 
     public function setLinkStatus(TeamLink $link, int $status): void
     {
         $link->update(['status' => $status]);
+
+        $team = $link->team;
+
+        if ($team !== null) {
+            $this->invalidateTeamMonth($team);
+        }
     }
 
     /** Legacy team-level status endpoint; apply the status to all its links. */
@@ -329,6 +455,23 @@ class TeamService
         DB::transaction(function () use ($team, $status): void {
             $team->update(['status' => $status]);
             $team->links()->update(['status' => $status]);
+        });
+
+        $this->invalidateTeamMonth($team);
+    }
+
+    private function invalidateTeamMonth(Team $team): void
+    {
+        $createdAt = $team->created_at;
+
+        if ($createdAt === null) {
+            return;
+        }
+
+        $yearMonth = $createdAt->format('Ym');
+
+        DB::afterCommit(function () use ($yearMonth): void {
+            $this->teamSource->forgetMonth($yearMonth);
         });
     }
 

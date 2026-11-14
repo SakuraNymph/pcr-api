@@ -20,6 +20,11 @@ final class SystemTriplePlanner
 
     private const BOSS_BITS = 2;
 
+    public function __construct(
+        private readonly SystemTeamRoleOptions $teamRoleOptions,
+        private readonly SystemRoleAssignment $roleAssignment
+    ) {}
+
     /**
      * @param  array<int, array<string, mixed>>  $snapshots
      * @return array{
@@ -28,7 +33,10 @@ final class SystemTriplePlanner
      *     stats: array<string, int>
      * }
      */
-    public function build(array $snapshots): array
+    public function build(
+        array $snapshots,
+        bool $requireCommonDifficulty = true
+    ): array
     {
         $teams = array_values($snapshots);
         $count = count($teams);
@@ -104,7 +112,7 @@ final class SystemTriplePlanner
                         & $difficultyMasks[$second]
                         & $difficultyMasks[$third];
 
-                    if ($difficultyMask === 0) {
+                    if ($difficultyMask === 0 && $requireCommonDifficulty) {
                         $noCommonDifficulty++;
 
                         continue;
@@ -308,8 +316,10 @@ final class SystemTriplePlanner
             return $result;
         }
 
-        $roleMask = new SystemSixHitRoleMask($this->collectRoleIds($snapshots));
-        $teamOptions = $this->makeAccountTeamOptions(
+        $roleMask = new SystemRoleMask(
+            $this->teamRoleOptions->collectRoleIds($snapshots)
+        );
+        $teamOptions = $this->teamRoleOptions->buildProfiles(
             $snapshots,
             $accountRoles,
             $roleMask
@@ -351,7 +361,7 @@ final class SystemTriplePlanner
             $unusable = false;
 
             foreach ($teamIds as $teamId) {
-                $options = $teamOptions[$teamId] ?? [];
+                $options = $teamOptions[$teamId]['borrow_options'] ?? [];
 
                 if ($options === []) {
                     $unusable = true;
@@ -367,7 +377,7 @@ final class SystemTriplePlanner
                 continue;
             }
 
-            $assignment = $this->findBorrowAssignment(
+            $assignment = $this->roleAssignment->findTripleAssignment(
                 $optionSets,
                 $roleMask,
                 $stats['borrow_option_trials']
@@ -793,158 +803,6 @@ final class SystemTriplePlanner
             4 => $magicCount === 3,
             default => false,
         };
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $snapshots
-     * @return array<int, int>
-     */
-    private function collectRoleIds(array $snapshots): array
-    {
-        $roleIds = [];
-
-        foreach ($snapshots as $snapshot) {
-            foreach (($snapshot['roles'] ?? []) as $roleId => $_) {
-                $roleIds[] = (int) $roleId;
-            }
-        }
-
-        $roleIds = array_values(array_unique(array_filter(
-            $roleIds,
-            static fn (int $roleId): bool => $roleId > 0
-        )));
-        sort($roleIds, SORT_NUMERIC);
-
-        return $roleIds;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $snapshots
-     * @param  array<int, bool>  $accountRoles
-     * @return array<int, array<int, array{role: int, mask: array<int, int>, count: int}>>
-     */
-    private function makeAccountTeamOptions(
-        array $snapshots,
-        array $accountRoles,
-        SystemSixHitRoleMask $roleMask
-    ): array {
-        $teamOptions = [];
-
-        foreach ($snapshots as $teamId => $team) {
-            $mandatoryRoles = [];
-            $optionalRoles = [];
-
-            foreach (($team['roles'] ?? []) as $roleId => $status) {
-                $roleId = (int) $roleId;
-                $status = (int) $status;
-
-                if ($status === 0 || ! isset($accountRoles[$roleId])) {
-                    $mandatoryRoles[] = $roleId;
-                } else {
-                    $optionalRoles[] = $roleId;
-                }
-            }
-
-            $mandatoryRoles = array_values(array_unique($mandatoryRoles));
-            $optionalRoles = array_values(array_unique($optionalRoles));
-            sort($mandatoryRoles, SORT_NUMERIC);
-            sort($optionalRoles, SORT_NUMERIC);
-
-            if (count($mandatoryRoles) > 1) {
-                $teamOptions[(int) $teamId] = [];
-
-                continue;
-            }
-
-            $effectiveMask = $roleMask->maskFromRoleIds($optionalRoles);
-
-            if (count($mandatoryRoles) === 1) {
-                $teamOptions[(int) $teamId] = [[
-                    'role' => (int) $mandatoryRoles[0],
-                    'mask' => $effectiveMask,
-                    'count' => 1,
-                ]];
-
-                continue;
-            }
-
-            $options = [[
-                'role' => 0,
-                'mask' => $effectiveMask,
-                'count' => 0,
-            ]];
-            $seenMasks = [implode(',', $effectiveMask) => true];
-
-            foreach ($optionalRoles as $roleId) {
-                $mask = $roleMask->withoutRole($effectiveMask, $roleId);
-                $maskKey = implode(',', $mask);
-
-                if (isset($seenMasks[$maskKey])) {
-                    continue;
-                }
-
-                $seenMasks[$maskKey] = true;
-                $options[] = [
-                    'role' => $roleId,
-                    'mask' => $mask,
-                    'count' => 1,
-                ];
-            }
-
-            $teamOptions[(int) $teamId] = $options;
-        }
-
-        return $teamOptions;
-    }
-
-    /**
-     * @param  array<int, array<int, array{role: int, mask: array<int, int>, count: int}>>  $optionSets
-     * @return array<int, array{role: int, mask: array<int, int>, count: int}>|null
-     */
-    private function findBorrowAssignment(
-        array $optionSets,
-        SystemSixHitRoleMask $roleMask,
-        int &$trials
-    ): ?array {
-        if (count($optionSets) !== 3) {
-            return null;
-        }
-
-        $best = null;
-
-        foreach ($optionSets[0] as $first) {
-            foreach ($optionSets[1] as $second) {
-                if ($roleMask->intersects($first['mask'], $second['mask'])) {
-                    continue;
-                }
-
-                $firstTwoMask = $roleMask->union($first['mask'], $second['mask']);
-
-                foreach ($optionSets[2] as $third) {
-                    $trials++;
-                    $count = $first['count'] + $second['count'] + $third['count'];
-
-                    if ($best !== null && $count > $best['count']) {
-                        continue;
-                    }
-
-                    if ($roleMask->intersects($firstTwoMask, $third['mask'])) {
-                        continue;
-                    }
-
-                    if ($best !== null && $count === $best['count']) {
-                        continue;
-                    }
-
-                    $best = [
-                        'count' => $count,
-                        'options' => [$first, $second, $third],
-                    ];
-                }
-            }
-        }
-
-        return $best === null ? null : $best['options'];
     }
 
     /**
