@@ -238,7 +238,7 @@ class GuildService
 
         if ($membership) {
             $data['members'] = GuildMember::query()
-                ->with('user:id,nickname,avatar,status')
+                ->with('user:id,public_uid,nickname,avatar,status')
                 ->where('guild_id', $guildId)
                 ->where('status', GuildMember::STATUS_ACTIVE)
                 ->orderBy('role')
@@ -969,6 +969,7 @@ class GuildService
                 $owner?->avatar !== null ? (int) $owner->avatar : null
             ),
             'owner_uid' => (int) $guild->owner_uid,
+            'owner_public_uid' => $owner?->public_uid !== null ? (int) $owner->public_uid : null,
             'owner_nickname' => $owner?->nickname,
             'member_count' => $memberCount,
             'pending_invitation_count' => $pendingCount,
@@ -997,6 +998,7 @@ class GuildService
     {
         return [
             'uid' => (int) $member->uid,
+            'public_uid' => $member->user?->public_uid !== null ? (int) $member->user->public_uid : null,
             'nickname' => $member->user?->nickname,
             'avatar_url' => $this->userProfileService->avatarUrl(
                 $member->user?->avatar !== null

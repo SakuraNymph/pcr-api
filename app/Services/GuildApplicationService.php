@@ -416,6 +416,7 @@ class GuildApplicationService
             'id' => (int) $application->id,
             'guild_id' => (int) $application->guild_id,
             'applicant_uid' => (int) $application->applicant_uid,
+            'applicant_public_uid' => $applicant?->public_uid !== null ? (int) $applicant->public_uid : null,
             'applicant_nickname' => $applicant?->nickname,
             'applicant_avatar_url' => $this->userProfileService->avatarUrl(
                 $applicant?->avatar !== null

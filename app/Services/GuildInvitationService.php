@@ -33,13 +33,14 @@ class GuildInvitationService
         $this->guildService->requireManager($guild, $actorUid);
 
         $user = User::query()
-            ->whereKey($uid)
+            ->where('public_uid', $uid)
             ->where('status', 1)
             ->first();
 
         if (! $user) {
             return [
-                'uid' => $uid,
+                'uid' => 0,
+                'public_uid' => $uid,
                 'nickname' => null,
                 'avatar_url' => null,
                 'eligible' => false,
@@ -62,6 +63,7 @@ class GuildInvitationService
 
         return [
             'uid' => (int) $user->id,
+            'public_uid' => (int) $user->public_uid,
             'nickname' => $user->nickname,
             'avatar_url' => $this->userProfileService->avatarUrl(
                 $user->avatar !== null ? (int) $user->avatar : null
@@ -458,8 +460,10 @@ class GuildInvitationService
                 $owner?->avatar !== null ? (int) $owner->avatar : null
             ),
             'inviter_uid' => (int) $invitation->inviter_uid,
+            'inviter_public_uid' => $invitation->inviter?->public_uid !== null ? (int) $invitation->inviter->public_uid : null,
             'inviter_nickname' => $invitation->inviter?->nickname,
             'invitee_uid' => (int) $invitation->invitee_uid,
+            'invitee_public_uid' => $invitation->invitee?->public_uid !== null ? (int) $invitation->invitee->public_uid : null,
             'invitee_nickname' => $invitation->invitee?->nickname,
             'status' => (int) $invitation->status,
             'status_name' => GuildInvitation::statusName((int) $invitation->status),

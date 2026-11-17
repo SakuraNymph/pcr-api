@@ -79,7 +79,13 @@ class GuildScheduleService
         $currentNicknames = $isCurrentMonth
             ? User::query()
                 ->whereIn('id', $rows->pluck('uid')->all())
-                ->pluck('nickname', 'id')
+                ->get(['id', 'public_uid'])
+                ->mapWithKeys(fn (User $user): array => [
+                    $user->id => [
+                        'nickname' => $user->nickname,
+                        'public_uid' => $user->public_uid,
+                    ],
+                ])
             : collect();
 
         $teamIds = $rows
@@ -134,9 +140,8 @@ class GuildScheduleService
             ): array {
                 $canEditRow = $isCurrentMonth
                     && ((int) $row->uid === $uid || $canEditOthers);
-                $nickname = $isCurrentMonth
-                    ? $currentNicknames->get($row->uid, $row->nickname)
-                    : $row->nickname;
+                $currentUser = $isCurrentMonth ? $currentNicknames->get($row->uid) : null;
+                $nickname = $currentUser['nickname'] ?? $row->nickname;
 
                 return $this->memberPayload(
                     $row,
@@ -144,7 +149,8 @@ class GuildScheduleService
                     $stages,
                     $canEditRow,
                     $isCurrentMonth,
-                    $nickname
+                    $nickname,
+                    $currentUser['public_uid'] ?? null
                 );
             })->values()->all(),
         ];
@@ -569,7 +575,8 @@ class GuildScheduleService
         array $stages,
         bool $canEditRow,
         bool $isCurrentMonth,
-        ?string $nickname
+        ?string $nickname,
+        ?int $publicUid
     ): array {
         $slots = [];
 
@@ -619,6 +626,7 @@ class GuildScheduleService
 
         return [
             'uid' => (int) $row->uid,
+            'public_uid' => $publicUid,
             'nickname' => $nickname,
             'role' => (int) $row->role,
             'role_name' => GuildMember::roleName((int) $row->role),
