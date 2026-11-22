@@ -74,6 +74,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_only_registered_users_can_access_the_endpoint(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -98,7 +99,7 @@ class SystemTripleApiTest extends TestCase
             ->assertJsonPath('status', 1);
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonPath('status', 0)
             ->assertJsonPath('code', 200)
@@ -127,6 +128,15 @@ class SystemTripleApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors('accountId');
         $this->postJson(self::URL, ['accountId' => $inactivePoolId])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('accountId');
+    }
+
+    public function test_account_id_is_required_for_current_month_system_triple(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $this->postJson(self::URL)
             ->assertStatus(422)
             ->assertJsonValidationErrors('accountId');
     }
@@ -472,6 +482,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_previous_month_uses_previous_natural_month_without_mixing_current_month(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 18));
         $previousBoss3 = $this->createTeam(
             3,
             100,
@@ -554,7 +565,7 @@ class SystemTripleApiTest extends TestCase
         $this->createLink($userTeam, 1);
         $this->createLink($hiddenTeam, 1);
         Sanctum::actingAs($this->user);
-        $currentResponse = $this->postJson(self::URL)
+        $currentResponse = $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->json('data');
         $currentCache = $this->formalSourceCache();
@@ -1171,6 +1182,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_only_current_month_system_d_stage_teams_with_requested_difficulty_are_used(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teamBoss3 = $this->createTeam(3, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $teamBoss1 = $this->createTeam(1, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $teamBoss2 = $this->createTeam(2, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1201,7 +1213,10 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $response = $this->postJson(self::URL, ['difficulty' => 1])
+        $response = $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk();
         $combinations = $response->json('data');
 
@@ -1211,13 +1226,17 @@ class SystemTripleApiTest extends TestCase
             array_column($combinations[0], 'id')
         );
 
-        $this->postJson(self::URL, ['difficulty' => 2])
+        $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 2,
+        ])
             ->assertOk()
             ->assertJsonCount(0, 'data');
     }
 
     public function test_role_shared_by_all_three_teams_is_valid_and_assigns_two_borrows(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 7));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [1 => 1, 4 => 1, 5 => 1]);
         $third = $this->createTeam(3, 100, 1, [1 => 1, 6 => 1, 7 => 1]);
@@ -1228,14 +1247,16 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $combination = $this->postJson(self::URL)->assertOk()->json('data.0');
+        $combination = $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->json('data.0');
 
         $this->assertCount(3, $combination);
         $this->assertSame(
             [
-                $first->id => 1,
+                $first->id => 0,
                 $second->id => 1,
-                $third->id => 0,
+                $third->id => 1,
             ],
             $this->borrowsById($combination)
         );
@@ -1243,6 +1264,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_two_roles_shared_by_all_three_teams_are_rejected(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 12));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 10 => 1]),
             $this->createTeam(2, 100, 1, [1 => 1, 2 => 1, 11 => 1]),
@@ -1255,7 +1277,7 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonPath('status', 0)
             ->assertJsonCount(0, 'data');
@@ -1263,6 +1285,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_pair_sharing_three_active_roles_is_rejected(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 6));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
@@ -1275,11 +1298,14 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(0, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
     }
 
     public function test_pair_sharing_two_active_roles_can_form_a_valid_combination(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 8));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 7 => 1]);
         $second = $this->createTeam(2, 100, 1, [1 => 1, 2 => 1, 8 => 1]);
         $third = $this->createTeam(3, 100, 1, [3 => 1, 4 => 1, 5 => 1]);
@@ -1290,7 +1316,9 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $combination = $this->postJson(self::URL)->assertOk()->json('data.0');
+        $combination = $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->json('data.0');
 
         $this->assertSame(
             [
@@ -1304,6 +1332,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_status_zero_role_is_marked_as_borrowed_first(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $first = $this->createTeam(1, 100, 1, [1 => 0, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $third = $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1314,7 +1343,9 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $combination = $this->postJson(self::URL)->assertOk()->json('data.0');
+        $combination = $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->json('data.0');
 
         $this->assertSame(
             [
@@ -1328,6 +1359,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_boss_attack_lock_and_hidden_filters_match_legacy_rules(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(1, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $third = $this->createTeam(2, 100, -1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1338,34 +1370,43 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL, ['row1' => 1])->assertJsonCount(1, 'data');
-        $this->postJson(self::URL, ['row1' => 1, 'row2' => 1])
+        $this->postJson(self::URL, ['accountId' => $poolId, 'row1' => 1])
             ->assertJsonCount(1, 'data');
-        $this->postJson(self::URL, ['row1' => 1, 'row2' => 2])
+        $this->postJson(self::URL, ['accountId' => $poolId, 'row1' => 1, 'row2' => 1])
             ->assertJsonCount(1, 'data');
-        $this->postJson(self::URL, ['row1' => 1, 'row2' => 1, 'row3' => 2])
+        $this->postJson(self::URL, ['accountId' => $poolId, 'row1' => 1, 'row2' => 2])
             ->assertJsonCount(1, 'data');
-        $this->postJson(self::URL, ['row1' => 1, 'row2' => 2, 'row3' => 2])
+        $this->postJson(self::URL, ['accountId' => $poolId, 'row1' => 1, 'row2' => 1, 'row3' => 2])
+            ->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId, 'row1' => 1, 'row2' => 2, 'row3' => 2])
             ->assertJsonCount(0, 'data');
 
-        $this->postJson(self::URL, ['atk' => 1])->assertJsonCount(0, 'data');
-        $this->postJson(self::URL, ['atk' => 2])->assertJsonCount(1, 'data');
-        $this->postJson(self::URL, ['atk' => 3])->assertJsonCount(0, 'data');
-        $this->postJson(self::URL, ['atk' => 4])->assertJsonCount(0, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId, 'atk' => 1])
+            ->assertJsonCount(0, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId, 'atk' => 2])
+            ->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId, 'atk' => 3])
+            ->assertJsonCount(0, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId, 'atk' => 4])
+            ->assertJsonCount(0, 'data');
 
         $this->postJson(self::URL, [
+            'accountId' => $poolId,
             'lockedIds' => [$first->id, $second->id],
         ])->assertJsonCount(1, 'data');
         $this->postJson(self::URL, [
+            'accountId' => $poolId,
             'lockedIds' => [$first->id, 9999],
         ])->assertJsonCount(0, 'data');
         $this->postJson(self::URL, [
+            'accountId' => $poolId,
             'hiddenIds' => [$third->id],
         ])->assertJsonCount(0, 'data');
     }
 
     public function test_results_are_limited_to_ten_unique_id_combinations(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 18));
         for ($index = 1; $index <= 6; $index++) {
             $baseRole = ($index - 1) * 3 + 1;
             $team = $this->createTeam(
@@ -1383,7 +1424,9 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $data = $this->postJson(self::URL)->assertOk()->json('data');
+        $data = $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->json('data');
 
         $this->assertCount(10, $data);
         $this->assertCount(
@@ -1402,6 +1445,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_combination_order_uses_weighted_damage_and_boss_order_inside_each_group(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 12));
         $boss5 = $this->createTeam(5, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $boss1 = $this->createTeam(1, 10, 1, [4 => 1, 5 => 1, 6 => 1]);
         $boss2 = $this->createTeam(2, 10, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1413,7 +1457,9 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $data = $this->postJson(self::URL)->assertOk()->json('data');
+        $data = $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->json('data');
 
         $this->assertSame(
             [
@@ -1432,6 +1478,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_cache_reuses_base_combinations_and_rebuilds_when_signature_changes(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 8));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [1 => 1, 4 => 1, 5 => 1]);
         $third = $this->createTeam(3, 100, 1, [1 => 1, 6 => 1, 7 => 1]);
@@ -1459,7 +1506,7 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonCount(1, 'data.0.0.link')
             ->assertJsonPath('data.0.0.link.0.url', 'https://example.com/active')
@@ -1483,7 +1530,9 @@ class SystemTripleApiTest extends TestCase
         $generatedAtBefore = $makeBefore['generated_at'];
 
         Carbon::setTestNow(Carbon::now()->addSecond());
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $sourceHit = $this->formalSourceCache();
         $makeHit = $this->formalMakeTeamsCache();
 
@@ -1493,7 +1542,7 @@ class SystemTripleApiTest extends TestCase
         app(TeamService::class)->setLinkStatus($activeLink, 0);
         Carbon::setTestNow(Carbon::now()->addSecond());
 
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonCount(0, 'data');
 
@@ -1513,7 +1562,7 @@ class SystemTripleApiTest extends TestCase
         app(SystemTeamSourceService::class)->forgetMonth('202610');
         Carbon::setTestNow(Carbon::now()->addSecond());
 
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonCount(0, 'data');
 
@@ -1528,6 +1577,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_cache_rebuilds_when_team_ids_change_with_same_count(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 12));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $third = $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1538,7 +1588,9 @@ class SystemTripleApiTest extends TestCase
             $this->createLink($team, 1);
         }
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $sourceBefore = $this->formalSourceCache();
 
         app(TeamService::class)->setStatus($first, 0);
@@ -1551,7 +1603,9 @@ class SystemTripleApiTest extends TestCase
         $this->createLink($replacement, 1);
         Carbon::setTestNow(Carbon::now()->addSecond());
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $sourceAfter = $this->formalSourceCache();
 
         $this->assertSame(3, $sourceAfter['team_count']);
@@ -1564,6 +1618,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_cache_is_scoped_by_month_and_difficulty(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 18));
         foreach ([1, 2, 3] as $index) {
             $start = $index * 3;
             $team = $this->createTeam(
@@ -1588,8 +1643,10 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL, ['difficulty' => 1])->assertOk();
-        $this->postJson(self::URL, ['difficulty' => 2])->assertOk();
+        $this->postJson(self::URL, ['accountId' => $poolId, 'difficulty' => 1])
+            ->assertOk();
+        $this->postJson(self::URL, ['accountId' => $poolId, 'difficulty' => 2])
+            ->assertOk();
 
         $make = $this->formalMakeTeamsCache();
 
@@ -1620,6 +1677,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_all_three_teams_must_contain_the_selected_difficulty(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 12));
         $autoTeams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -1640,7 +1698,10 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $combination = $this->postJson(self::URL, ['difficulty' => 1])
+        $combination = $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->json('data.0');
@@ -1650,13 +1711,17 @@ class SystemTripleApiTest extends TestCase
             array_column($combination, 'id')
         );
 
-        $this->postJson(self::URL, ['difficulty' => 2])
+        $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 2,
+        ])
             ->assertOk()
             ->assertJsonCount(0, 'data');
     }
 
     public function test_five_difficulties_are_generated_as_separate_groups_and_default_to_auto(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -1673,6 +1738,7 @@ class SystemTripleApiTest extends TestCase
 
         for ($difficulty = 1; $difficulty <= 5; $difficulty++) {
             $data = $this->postJson(self::URL, [
+                'accountId' => $poolId,
                 'difficulty' => $difficulty,
             ])->assertOk()->assertJsonCount(1, 'data')->json('data.0');
 
@@ -1682,11 +1748,14 @@ class SystemTripleApiTest extends TestCase
             );
         }
 
-        $default = $this->postJson(self::URL)
+        $default = $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->json('data.0');
-        $auto = $this->postJson(self::URL, ['difficulty' => 1])
+        $auto = $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->json('data.0');
@@ -1770,6 +1839,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_missing_difficulty_versions_only_remove_that_difficulty_group(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $third = $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -1787,13 +1857,19 @@ class SystemTripleApiTest extends TestCase
         Sanctum::actingAs($this->user);
 
         foreach ([1, 5] as $difficulty) {
-            $this->postJson(self::URL, ['difficulty' => $difficulty])
+            $this->postJson(self::URL, [
+                'accountId' => $poolId,
+                'difficulty' => $difficulty,
+            ])
                 ->assertOk()
                 ->assertJsonCount(1, 'data');
         }
 
         foreach ([2, 3, 4] as $difficulty) {
-            $this->postJson(self::URL, ['difficulty' => $difficulty])
+            $this->postJson(self::URL, [
+                'accountId' => $poolId,
+                'difficulty' => $difficulty,
+            ])
                 ->assertOk()
                 ->assertJsonCount(0, 'data');
         }
@@ -1808,6 +1884,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_request_filters_do_not_regenerate_public_combinations(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -1819,12 +1896,15 @@ class SystemTripleApiTest extends TestCase
         }
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $makeBefore = $this->formalMakeTeamsCache();
         $sourceBefore = $this->formalSourceCache();
 
         Carbon::setTestNow(Carbon::now()->addSecond());
         $this->postJson(self::URL, [
+            'accountId' => $poolId,
             'row1' => 1,
             'row2' => 2,
             'atk' => 2,
@@ -1841,6 +1921,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_public_cache_hit_does_not_extend_thirty_day_ttl(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         Carbon::setTestNow(Carbon::parse('2026-10-01 12:00:00'));
 
         $teams = [
@@ -1857,13 +1938,17 @@ class SystemTripleApiTest extends TestCase
         $makeKey = 'systemTripleTeamsMakeTeams:202610';
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $sourceBefore = $this->formalSourceCache();
         $makeBefore = $this->formalMakeTeamsCache();
 
         Carbon::setTestNow(Carbon::now()->addDays(29));
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
 
         $this->assertTrue(Cache::has($sourceKey));
         $this->assertTrue(Cache::has($makeKey));
@@ -1881,7 +1966,9 @@ class SystemTripleApiTest extends TestCase
         $this->assertFalse(Cache::has($sourceKey));
         $this->assertFalse(Cache::has($makeKey));
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
 
         $this->assertTrue(Cache::has($sourceKey));
         $this->assertTrue(Cache::has($makeKey));
@@ -1915,11 +2002,15 @@ class SystemTripleApiTest extends TestCase
         Sanctum::actingAs($this->user);
         DB::enableQueryLog();
         DB::flushQueryLog();
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $coldQueries = $this->countSourceTableQueries(DB::getQueryLog());
 
         DB::flushQueryLog();
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $hitQueries = $this->countSourceTableQueries(DB::getQueryLog());
 
         DB::flushQueryLog();
@@ -1938,6 +2029,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_source_row_cache_expires_after_one_hour(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -1949,20 +2041,26 @@ class SystemTripleApiTest extends TestCase
         }
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
 
         $cacheKey = 'system-source:rows:v1:202610:high';
         $generatedAt = Cache::get($cacheKey)['generated_at'];
 
         Carbon::setTestNow(Carbon::now()->addSeconds(3599));
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $this->assertSame(
             $generatedAt,
             Cache::get($cacheKey)['generated_at']
         );
 
         Carbon::setTestNow(Carbon::now()->addSeconds(2));
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $this->assertNotSame(
             $generatedAt,
             Cache::get($cacheKey)['generated_at']
@@ -1971,6 +2069,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_source_change_rebuilds_all_five_groups_together(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -1989,7 +2088,10 @@ class SystemTripleApiTest extends TestCase
         }
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL, ['difficulty' => 1])
+        $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk()
             ->assertJsonCount(1, 'data');
         $before = $this->formalMakeTeamsCache();
@@ -2001,7 +2103,10 @@ class SystemTripleApiTest extends TestCase
         app(TeamService::class)->setLinkStatus($eyeLink, 0);
         Carbon::setTestNow(Carbon::now()->addSecond());
 
-        $this->postJson(self::URL, ['difficulty' => 1])
+        $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk()
             ->assertJsonCount(1, 'data');
         $after = $this->formalMakeTeamsCache();
@@ -2016,6 +2121,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_incomplete_group_payload_is_rebuilt_as_one_complete_cache(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $teams = [
             $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]),
             $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]),
@@ -2027,7 +2133,9 @@ class SystemTripleApiTest extends TestCase
         }
 
         Sanctum::actingAs($this->user);
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $payload = $this->formalMakeTeamsCache();
         unset($payload['groups'][5]);
         Cache::put(
@@ -2036,7 +2144,9 @@ class SystemTripleApiTest extends TestCase
             now()->addDays(30)
         );
 
-        $this->postJson(self::URL)->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson(self::URL, ['accountId' => $poolId])
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
         $rebuilt = $this->formalMakeTeamsCache();
 
         $this->assertSame([1, 2, 3, 4, 5], array_keys($rebuilt['groups']));
@@ -2046,6 +2156,7 @@ class SystemTripleApiTest extends TestCase
 
     public function test_hidden_links_do_not_count_toward_difficulty(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $third = $this->createTeam(3, 100, 1, [7 => 1, 8 => 1, 9 => 1]);
@@ -2056,13 +2167,17 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL, ['difficulty' => 1])
+        $this->postJson(self::URL, [
+            'accountId' => $poolId,
+            'difficulty' => 1,
+        ])
             ->assertOk()
             ->assertJsonCount(0, 'data');
     }
 
     public function test_fewer_than_three_eligible_teams_returns_empty_data(): void
     {
+        $poolId = $this->createRolePool($this->user->id, range(1, 9));
         $first = $this->createTeam(1, 100, 1, [1 => 1, 2 => 1, 3 => 1]);
         $second = $this->createTeam(2, 100, 1, [4 => 1, 5 => 1, 6 => 1]);
         $this->createLink($first, 1);
@@ -2070,7 +2185,7 @@ class SystemTripleApiTest extends TestCase
 
         Sanctum::actingAs($this->user);
 
-        $this->postJson(self::URL)
+        $this->postJson(self::URL, ['accountId' => $poolId])
             ->assertOk()
             ->assertJsonPath('status', 0)
             ->assertJsonCount(0, 'data');

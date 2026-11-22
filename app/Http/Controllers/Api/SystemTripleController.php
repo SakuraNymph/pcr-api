@@ -49,42 +49,34 @@ class SystemTripleController extends Controller
             $accountId,
         ] = $this->validatedFilters($request, $previousMonth);
 
-        $data = $accountId === null
-            ? $this->systemTripleService->getGroups(
+        if ($previousMonth) {
+            $data = $this->systemTripleService->getGroups(
                 $difficulty,
                 $bossMap,
                 $atkType,
                 $lockedIds,
                 $hiddenIds,
-                $previousMonth
-            )
-            : $this->systemTripleService->getAccountGroups(
+                true
+            );
+        } else {
+            $data = $this->systemTripleService->getAccountGroups(
                 (int) $request->user()->id,
-                $accountId,
+                (int) $accountId,
                 $difficulty,
                 $bossMap,
                 $atkType,
                 $lockedIds,
                 $hiddenIds
             );
+        }
 
         return $this->success($data, $message);
     }
 
     /**
-     * @return array{
-     *     0: int,
-     *     1: array<int, int>,
-     *     2: int,
-     *     3: array<int, int>,
-     *     4: array<int, int>,
-     *     5: int|null
-     * }
+     * @return array{0: int, 1: array<int, int>, 2: int, 3: array<int, int>, 4: array<int, int>, 5: int|null}
      */
-    private function validatedFilters(
-        Request $request,
-        bool $previousMonth
-    ): array
+    private function validatedFilters(Request $request, bool $previousMonth): array
     {
         $rules = [
             'row1' => ['nullable', 'integer'],
@@ -101,7 +93,7 @@ class SystemTripleController extends Controller
         if (! $previousMonth) {
             $uid = (int) ($request->user()?->id ?? 0);
             $rules['accountId'] = [
-                'nullable',
+                'required',
                 'integer',
                 'min:1',
                 Rule::exists('user_role_pools', 'id')->where(
@@ -117,6 +109,10 @@ class SystemTripleController extends Controller
             'accountId.min' => '游戏账号参数无效',
             'accountId.exists' => '游戏账号不存在或不属于当前用户',
         ]);
+
+        $accountId = isset($validated['accountId'])
+            ? (int) $validated['accountId']
+            : null;
 
         $bossMap = [];
 
@@ -140,9 +136,7 @@ class SystemTripleController extends Controller
             (int) ($validated['atk'] ?? 0),
             $lockedIds,
             $hiddenIds,
-            isset($validated['accountId'])
-                ? (int) $validated['accountId']
-                : null,
+            $accountId,
         ];
     }
 }
