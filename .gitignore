@@ -49,6 +49,7 @@ database/migrations/*
 !database/migrations/2026_11_12_000003_create_user_feedback_images_table.php
 !database/migrations/2026_11_14_000000_drop_system_triple_cache_tables.php
 !database/migrations/2026_11_14_000001_drop_system_six_hit_cache_tables.php
+!database/migrations/2026_11_25_000000_add_registered_at_to_users_table.php
 !database/seeders/
 database/seeders/*
 !database/seeders/FeedbackManagementSeeder.php

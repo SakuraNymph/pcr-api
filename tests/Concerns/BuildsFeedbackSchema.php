@@ -37,6 +37,7 @@ trait BuildsFeedbackSchema
             $table->unsignedBigInteger('avatar')->nullable();
             $table->timestamp('nickname_updated_at')->nullable();
             $table->tinyInteger('status')->default(0);
+            $table->timestamp('registered_at')->nullable();
             $table->tinyInteger('is_subscribe')->default(1);
             $table->string('email')->nullable();
             $table->string('password')->nullable();

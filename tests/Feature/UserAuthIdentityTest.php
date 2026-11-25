@@ -613,6 +613,44 @@ class UserAuthIdentityTest extends TestCase
         $this->assertDatabaseCount('visitor_tokens', 0);
     }
 
+    public function test_registration_records_registered_at_without_touching_created_at(): void
+    {
+        [$guest, $visitorToken] = $this->makeVisitor();
+
+        $createdAt = $guest->created_at;
+
+        // 访客先使用一段时间，之后再注册。
+        Carbon::setTestNow(Carbon::parse('2026-11-20 09:30:00'));
+
+        Cache::put(
+            'register_code:later@example.com',
+            '123456',
+            now()->addMinutes(5)
+        );
+
+        $this->withHeader('Authorization', 'Bearer '.$visitorToken)
+            ->postJson('/api/user/register', [
+                'nickname' => '后注册用户',
+                'email' => 'later@example.com',
+                'code' => '123456',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 0);
+
+        $guest->refresh();
+
+        // 首次访问时间不变。
+        $this->assertTrue($createdAt->equalTo($guest->created_at));
+
+        // 注册时间记录为真正注册的时刻。
+        $this->assertNotNull($guest->registered_at);
+        $this->assertTrue(
+            Carbon::parse('2026-11-20 09:30:00')->equalTo($guest->registered_at)
+        );
+    }
+
     public function test_duplicate_public_uid_is_rejected_by_unique_index(): void
     {
         $first = $this->createUser('a@example.com', 'secret', 1);
@@ -829,6 +867,7 @@ class UserAuthIdentityTest extends TestCase
             $table->unsignedBigInteger('avatar')->nullable();
             $table->timestamp('nickname_updated_at')->nullable();
             $table->tinyInteger('status')->default(0);
+            $table->timestamp('registered_at')->nullable();
             $table->tinyInteger('is_subscribe')->default(1);
             $table->string('email')->nullable();
             $table->string('password')->nullable();

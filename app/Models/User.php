@@ -26,6 +26,7 @@ class User extends Authenticatable
         'nickname_updated_at',
         'public_uid',
         'status',
+        'registered_at',
         'is_subscribe',
         'email',
         'password',
@@ -50,6 +51,7 @@ class User extends Authenticatable
             'is_subscribe' => 'boolean',
             'avatar' => 'integer',
             'nickname_updated_at' => 'datetime',
+            'registered_at' => 'datetime',
             'public_uid' => 'integer',
             'password' => 'hashed',
         ];

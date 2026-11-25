@@ -8,6 +8,14 @@ use Carbon\Carbon;
 
 class DashboardService
 {
+    /*
+     * 已知统计偏差（产品已确认接受）：
+     * - users.ip 会在注册与登录时被覆盖，因此“新增用户”按 IP 去重的历史数字
+     *   可能随用户更换 IP 而轻微漂移。
+     * - 新增用户按 IP 去重、新增注册按账号统计，同一 IP 多账号注册时
+     *   可能出现“新增注册 > 新增用户”。
+     */
+
     /**
      * 获取 Dashboard 全部数据
      */
@@ -75,6 +83,11 @@ class DashboardService
     /**
      * 统计某一天的数据
      *
+     * 口径说明：
+     * - 访问用户：daily_user_visits 每用户每天唯一，天然按人去重。
+     * - 新增用户：按 users.ip 去重，同一 IP 当天只计 1 个新增。
+     * - 新增注册：按 registered_at 统计真正的注册时间，不按首次访问时间。
+     *
      * @param Carbon $date
      */
     private function getDayStats(Carbon $date): array
@@ -90,20 +103,21 @@ class DashboardService
                 ->count(),
 
 
-            // 当日新增用户
+            // 当日新增用户（按 IP 去重）
             'new_users' => User::query()
                 ->whereDate(
                     'created_at',
                     $date
                 )
-                ->count(),
+                ->distinct()
+                ->count('ip'),
 
 
             // 当日新增注册用户
             'new_registers' => User::query()
-                ->where('status', 1)
+                ->whereNotNull('registered_at')
                 ->whereDate(
-                    'created_at',
+                    'registered_at',
                     $date
                 )
                 ->count(),
@@ -138,7 +152,7 @@ class DashboardService
                 ->count(),
 
 
-            // 新增用户
+            // 新增用户（按 IP 去重）
             'new_users' => User::query()
                 ->whereBetween(
                     'created_at',
@@ -147,14 +161,15 @@ class DashboardService
                         $end
                     ]
                 )
-                ->count(),
+                ->distinct()
+                ->count('ip'),
 
 
             // 新增注册用户
             'new_registers' => User::query()
-                ->where('status', 1)
+                ->whereNotNull('registered_at')
                 ->whereBetween(
-                    'created_at',
+                    'registered_at',
                     [
                         $start,
                         $end
@@ -212,7 +227,7 @@ class DashboardService
                     ->count(),
 
 
-                // 月新增用户
+                // 月新增用户（按 IP 去重）
                 'new_users' => User::query()
                     ->whereBetween(
                         'created_at',
@@ -221,14 +236,15 @@ class DashboardService
                             $end
                         ]
                     )
-                    ->count(),
+                    ->distinct()
+                    ->count('ip'),
 
 
                 // 月新增注册用户
                 'new_registers' => User::query()
-                    ->where('status', 1)
+                    ->whereNotNull('registered_at')
                     ->whereBetween(
-                        'created_at',
+                        'registered_at',
                         [
                             $start,
                             $end

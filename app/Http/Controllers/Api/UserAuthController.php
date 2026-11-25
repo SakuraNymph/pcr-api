@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Rules\NicknameByteLength;
+use App\Services\DailyUserVisitService;
 use App\Services\UserAuthService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ class UserAuthController extends Controller
     use ApiResponse;
 
     public function __construct(
-        protected UserAuthService $userAuthService
+        protected UserAuthService $userAuthService,
+        protected DailyUserVisitService $dailyUserVisitService
     ) {
     }
 
@@ -44,6 +46,8 @@ class UserAuthController extends Controller
             && is_string($bearerToken)
             && $bearerToken !== ''
         ) {
+            $this->dailyUserVisitService->record($currentUser, $request->ip());
+
             return $this->success([
                 'visitor' => $currentUser->only(['id', 'status']),
                 'accessToken' => $bearerToken,

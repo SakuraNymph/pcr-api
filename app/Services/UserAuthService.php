@@ -12,7 +12,8 @@ class UserAuthService
 {
     public function __construct(
         private readonly UserProfileService $userProfileService,
-        private readonly PublicUidService $publicUidService
+        private readonly PublicUidService $publicUidService,
+        private readonly DailyUserVisitService $dailyUserVisitService
     ) {}
 
     /**
@@ -29,6 +30,8 @@ class UserAuthService
             $user = $this->findVisitorByToken($bearerToken);
 
             if ($user instanceof User) {
+                $this->dailyUserVisitService->record($user, $ip);
+
                 return [
                     'visitor' => $user->only(['id', 'status']),
                     'accessToken' => $bearerToken,
@@ -41,6 +44,8 @@ class UserAuthService
             'status' => 0,
             'is_subscribe' => 1,
         ]);
+
+        $this->dailyUserVisitService->record($user, $ip);
 
         $accessToken = $this->issueVisitorToken($user);
 
@@ -107,6 +112,7 @@ class UserAuthService
                 'password' => $data['password'],
                 'avatar' => $this->userProfileService->defaultAvatarId(),
                 'status' => 1,
+                'registered_at' => now(),
                 'is_subscribe' => $user->is_subscribe ?? 1,
             ]);
 

@@ -30,6 +30,7 @@ class DailyUserVisitRecordTest extends TestCase
 
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedInteger('public_uid')->nullable()->unique();
             $table->string('ip', 45);
             $table->string('nickname')->nullable();
             $table->tinyInteger('status')->default(0);
@@ -37,6 +38,28 @@ class DailyUserVisitRecordTest extends TestCase
             $table->string('email')->nullable();
             $table->string('password')->nullable();
             $table->rememberToken();
+            $table->timestamps();
+        });
+
+        Schema::create('visitor_tokens', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('uid');
+            $table->char('token_hash', 64)->unique();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamps();
+
+            $table->index('uid');
+        });
+
+        Schema::create('personal_access_tokens', function (Blueprint $table): void {
+            $table->id();
+            $table->morphs('tokenable');
+            $table->text('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable()->index();
             $table->timestamps();
         });
 
@@ -92,7 +115,7 @@ class DailyUserVisitRecordTest extends TestCase
         );
     }
 
-    public function test_guest_visit_is_not_recorded(): void
+    public function test_guest_visit_is_recorded_once_per_day(): void
     {
         Route::middleware(['user.auth', 'user.identity:any', 'user.visit'])
             ->get('/api/test/daily-visit/any', fn () => response()->json(['status' => 0]));
@@ -100,8 +123,16 @@ class DailyUserVisitRecordTest extends TestCase
         Sanctum::actingAs($this->guest);
 
         $this->getJson('/api/test/daily-visit/any')->assertOk();
+        $this->getJson('/api/test/daily-visit/any')->assertOk();
 
-        $this->assertSame(0, DB::table('daily_user_visits')->count());
+        $this->assertSame(
+            1,
+            DB::table('daily_user_visits')->where('user_id', $this->guest->id)->count()
+        );
+        $this->assertSame(
+            '2026-11-15',
+            DB::table('daily_user_visits')->where('user_id', $this->guest->id)->value('visit_date')
+        );
     }
 
     public function test_a_new_day_creates_a_second_record(): void
@@ -121,5 +152,48 @@ class DailyUserVisitRecordTest extends TestCase
             2,
             DB::table('daily_user_visits')->where('user_id', $this->user->id)->count()
         );
+    }
+
+    public function test_visitor_initialization_is_recorded_once_per_day(): void
+    {
+        $first = $this->postJson('/api/user/visitor')
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame(
+            1,
+            DB::table('daily_user_visits')->where('user_id', $first['visitor']['id'])->count()
+        );
+
+        $this->withHeader('Authorization', 'Bearer '.$first['accessToken'])
+            ->postJson('/api/user/visitor')
+            ->assertOk();
+
+        $this->assertSame(
+            1,
+            DB::table('daily_user_visits')->where('user_id', $first['visitor']['id'])->count()
+        );
+
+        Carbon::setTestNow(Carbon::parse('2026-11-16 09:00:00'));
+
+        $this->withHeader('Authorization', 'Bearer '.$first['accessToken'])
+            ->postJson('/api/user/visitor')
+            ->assertOk();
+
+        $this->assertSame(
+            2,
+            DB::table('daily_user_visits')->where('user_id', $first['visitor']['id'])->count()
+        );
+    }
+
+    public function test_registered_user_visitor_initialization_is_not_recorded(): void
+    {
+        $token = $this->user->createToken('user-token')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->postJson('/api/user/visitor')
+            ->assertStatus(409);
+
+        $this->assertSame(0, DB::table('daily_user_visits')->count());
     }
 }

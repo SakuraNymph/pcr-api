@@ -198,6 +198,24 @@ class AdminFeedbackApiTest extends TestCase
         $this->assertStringNotContainsString('"path"', $payload);
     }
 
+    public function test_admin_detail_reports_registered_at_instead_of_created_at(): void
+    {
+        $this->actingAsAdmin('super_admin');
+        $user = $this->createUser();
+
+        // 首次访问时间与注册时间不同，确保返回的是注册时间。
+        $user->forceFill([
+            'created_at' => Carbon::parse('2026-10-01 08:00:00'),
+            'registered_at' => Carbon::parse('2026-11-10 09:00:00'),
+        ])->save();
+
+        $feedback = $this->createFeedback($user);
+
+        $this->getJson('/api/admin/feedback/'.$feedback->id)
+            ->assertOk()
+            ->assertJsonPath('data.user.registered_at', '2026-11-10 09:00:00');
+    }
+
     public function test_admin_mark_read_marks_only_user_messages(): void
     {
         $this->actingAsAdmin('super_admin');

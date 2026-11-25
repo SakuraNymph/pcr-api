@@ -32,6 +32,7 @@ class UserController extends Controller
                 'city',
                 'nickname',
                 'status',
+                'registered_at',
                 'is_subscribe',
                 'email',
                 'created_at',
@@ -117,10 +118,10 @@ class UserController extends Controller
             );
         }
 
-        // 创建时间范围
+        // 注册时间范围
         if ($request->filled('start_date')) {
             $query->whereDate(
-                'created_at',
+                'registered_at',
                 '>=',
                 $request->input('start_date')
             );
@@ -128,7 +129,7 @@ class UserController extends Controller
 
         if ($request->filled('end_date')) {
             $query->whereDate(
-                'created_at',
+                'registered_at',
                 '<=',
                 $request->input('end_date')
             );

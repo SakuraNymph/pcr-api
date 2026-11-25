@@ -506,7 +506,7 @@ class FeedbackService
                 ? $this->userProfileService->avatarUrl($user->avatar !== null ? (int) $user->avatar : null)
                 : null,
             'status' => (int) $user->status,
-            'registered_at' => $this->formatDateTime($user->created_at),
+            'registered_at' => $this->formatDateTime($user->registered_at),
         ];
     }
 
